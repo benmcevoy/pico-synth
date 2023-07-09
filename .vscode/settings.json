@@ -1,0 +1,17 @@
+{
+    "files.associations": {
+        "stdlib.h": "c",
+        "time.h": "c",
+        "algorithm": "c",
+        "pwm.h": "c",
+        "stdio.h": "c",
+        "audio_pwm.h": "c",
+        "audio.h": "c",
+        "multicore.h": "c",
+        "cmath": "c",
+        "complex": "c",
+        "random": "c",
+        "*.tcc": "c",
+        "math.h": "c"
+    }
+}

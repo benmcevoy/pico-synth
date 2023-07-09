@@ -1,0 +1,11 @@
+﻿pico-examples/
+pico-playground/
+pico-extras/
+picoprobe/
+picotool/
+docs/
+src/build/
+
+nohup.out
+.envrc
+
