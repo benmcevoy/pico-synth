@@ -8,48 +8,59 @@ DONE - add a reset button pin 30 short to ground
 
 
 installed mostly as per 
-https://raw.githubusercontent.com/raspberrypi/pico-setup/master/pico_setup.sh
+
+`https://raw.githubusercontent.com/raspberrypi/pico-setup/master/pico_setup.sh`
 
 skipped OpenOCD and some pi related things
 
 
 blink - it sure did
+
 hello_world
 
-sudo dmesg 
+`sudo dmesg`
+
 shows the usb device
 
 then we can monitor it
-sudo plink -serial /dev/ttyACM0 -sercfg 115200
+
+`sudo plink -serial /dev/ttyACM0 -sercfg 115200`
 
 ## CMAKE Build
 
 if you just run cmake it makes an awful mess
 
 i don't really know what i'm doing...
+
 grabbed the exmaple base cmake.txt and sdk import files as the basis
+
 set the project to synth
+
 in the synth project just include main.c to build, plus a bit of pico config
 
 e.g.
 
+```
 pico_enable_stdio_usb(synth 1)
 pico_enable_stdio_uart(synth 0)
-
+```
 
 
 prepare the build folder, from /src
+
+```
 mkdir build
 cd build
 cmake ..
+```
 
 this dumps a load of stuff in build
 
 then cd into e.g. build/synth and
 
-make -j4
+`make -j4`
 
-or just make
+or just `make`
 
 
 cmake makes make.  duh...
@@ -61,12 +72,14 @@ currently logging via usb.  i read that this is intensive compared to UART.
 
 just turn on UART and turn off USB for stdio
 
+```
 pico_enable_stdio_usb(${projectName} 0)
 pico_enable_stdio_uart(${projectName} 1)
+```
 
 for now, don't care.  it's more convient to use usb.
 
-sudo plink -serial /dev/ttyACM0 -sercfg 115200
+`sudo plink -serial /dev/ttyACM0 -sercfg 115200`
 
 ## wavetable on an irq
 
@@ -78,9 +91,11 @@ i assume that once started i have to go into some loop to stay alive...  what is
 
 so we can just loop through the sound.h array then exit.  no wukkas.
 
+```
 // set up pwm
 // setup an irq to provide a nice clock
 // the sample is 44.1kHz and 8 bit
+```
 
 pointer into an array is going to be *char++ something like that... to step 8 bits/byte per step
 
@@ -112,7 +127,9 @@ in the sdk docs and the datasheet it is not defined.  but i think that PWM has a
 https://www.codrey.com/raspberry-pi/raspberry-pi-pico-pwm-primer/
 
 so, pin0 has associated slice number 0A  that's not HEX mind, that's 0 channel A
+
 and pin1 is channel b e.g. 0B
+
 so we do get 16 "channels" on 8 "slices"
 
 
@@ -124,11 +141,12 @@ it's also not defined, thanks for that.
 
 looks like
 
+```
 channelA: -___-___-___
 channelb: ---_---_---_
+```
 
 so this example is not really what we want.
-
 
 https://www.raspberrypi.com/documentation/pico-sdk/hardware.html#hardware_pwm
 
@@ -137,7 +155,6 @@ this is better but still assumes an awful lot...
 https://www.raspberrypi.com/documentation/pico-sdk/hardware.html#detailed-description109
 
 ok rtfm...
-
 
 another example ticks some boxes...
 
@@ -178,15 +195,18 @@ looking at some other example the wrap also affects this.
 it's not clear yet.
 
 but at 125Mhz
+
 we can set a wrap of 254
+
 and a divider of 12
+
 and get 41010.498687664 Hz
 
 close enough.
 
 this example tweaks the sys clock to to get a nicer audio clock
-https://github.com/rgrosset/pico-pwm-audio/blob/main/pico-pwm-audio.c
 
+https://github.com/rgrosset/pico-pwm-audio/blob/main/pico-pwm-audio.c
 
 oh this line: `irq_set_exclusive_handler(PWM_IRQ_WRAP, on_pwm_wrap);`
 
@@ -198,8 +218,11 @@ https://www.raspberrypi.com/documentation/pico-sdk/hardware.html#interrupt-numbe
 feck.
 
 so, i assumed the pwm level would be 16 bit.
+
 oh, is it tied to the wrap level?
+
 anyway, send an 8bit value works.
+
 my clock speed was correct too.
 
 ah, better the rp2040 datasheet has more info
@@ -214,6 +237,7 @@ well that's handy....
 wrap is a terrible name, it's the trigger level.
 
 if i want to send 16bit samples i set wrap to 65535
+
 oh, which gives me 1900 HERTZ!  bit slow...
 
 yes that seems to be the case.  but the clock speed is no good
@@ -227,18 +251,22 @@ ok.
 so for the reality situation
 
 8 bit sound
+
 a wrap of 255 or so
 
 and in fact our original values are pretty good for 44.1kHz
 
 we can probably drop to 22kHz
+
 wrap:255
+
 div:22
+
 lands us at about 22.3kHz
+
 as our sample is 44.1 we have to increment the index TWICE to make it about right.,
 
 that is my hypothesis, let us try.
-
 
 it is so.
 
@@ -247,6 +275,7 @@ ok, better read the rp2040 datasheet then...
 Before looking at DMA I want to look at buffers.
 
 I am thinking I need two buffers.  one is being streamed to the PWM while the other is filled.
+
 when the buffer is empty i swap over.
 
 is that normal? double buffering?
@@ -279,14 +308,14 @@ void cleanup(BelaContext *context, void *userData)
 the context provides several things, audio buffers, analog buffers, digital buffers, bidirectional too.
 
 we care only for an audioOut buffer and samplesElapsed
+
 also, I do not need to care about "frames" that is how many channels per sample do i need to fill.
+
 it's one channel, mono so it's all 1.  hence just  samplesElapsed (u64)
 
-userData is just some user struct that get passed around, so more user context data.
-i do not care for now.
+userData is just some user struct that get passed around, so more user context data. i do not care for now.
 
-how did I write my synth?  I made a `MonoWaveStream` that just fills a buffer when asked.
-and it get's it's next byte from `_voice.Output(Time).Out.Value`
+how did I write my synth?  I made a `MonoWaveStream` that just fills a buffer when asked. and it get's it's next byte from `_voice.Output(Time).Out.Value`
 
 `Time` then is `samplesElapsed`
 
@@ -294,8 +323,8 @@ so, trying to port my code...
 
 I want a `Device` that has two buffers and 
 
-a pointer that tracks the current buffer 
-a read index
+- a pointer that tracks the current buffer 
+- a read index
 
 on the IRQ we just read another value from the buffer.
 
@@ -309,8 +338,7 @@ how do i fill the buffer while continuing to service the irq?
 
 threads? trigger another IRQ when swapping buffers?
 
-skimming throught he examples, DMA offers control block chain - which is basically an array of buffers
-or raise an IRQ when data is needed
+skimming throught he examples, DMA offers control block chain - which is basically an array of buffers, or raise an IRQ when data is needed
 
 there are timers, which use the system timers e.g. alarms
 
@@ -332,7 +360,6 @@ but today that is beyond me.
 
 SO.
 
-
 ## buffers and dma
 
 Double buffer and use an IRQ to request more data.
@@ -340,22 +367,21 @@ do not care about DMA at this time.
 
 fill the buffer so we can continuosly play a sine wave or something
 
-
 ok. 
 
-Amplitude = sin(2*pi*f*t)
+`Amplitude = sin(2*pi*f*t)`
 
 and 
 
-t = samplesElapsed/sampleRate
+`t = samplesElapsed/sampleRate`
 
 and sample rate as given in the rp2040 datasheet
 
-fsys = 125 MHz
+`fsys = 125 MHz`
 
-fpwm = fsys/period
+`fpwm = fsys/period`
 
-period = (WRAP+1)*(phase_correct+1)*(DIV+15/16)
+`period = (WRAP+1)*(phase_correct+1)*(DIV+15/16)`
 
 so we use wrap =254 and div =22 to get fpwm=21370.946198643
 
@@ -382,8 +408,7 @@ actually it's a phase problem.  regular click.
 
 actually it's a bunch of bugs.  using `_samplesElapsed` which is still being incremented by the core0 while core1 tries to use it.
 
-marshalling data to core1?  i think the FIFO is used?
-i just copy the value.  solid.
+marshalling data to core1?  i think the FIFO is used? i just copy the value.  solid.
 
 ok, reduce the buffer! 1k, just fine.
 
@@ -406,7 +431,6 @@ Also: "the PWM block can also be used as a source of regular interrupt requests 
 Like polling MIDI or ADC...
 
 Choice.
-
 
 
 ## core0 synth
