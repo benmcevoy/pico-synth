@@ -1,7 +1,8 @@
-﻿pico
-DONE - solder on some headers
-DONE - add a reset button pin 30 short to ground
+# ﻿pico
 
+DONE - solder on some headers
+
+DONE - add a reset button pin 30 short to ground
 
 ## DONE - toolchain
 
