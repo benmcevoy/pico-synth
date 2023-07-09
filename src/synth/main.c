@@ -5,7 +5,6 @@
 #include "pico/multicore.h"
 #include "hardware/irq.h"
 #include "hardware/pwm.h"
-#include "sound.h"
 
 #define PI 3.14159265358979323846
 #define PIN 26
