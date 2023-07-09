@@ -1,4 +1,4 @@
-# ﻿pico
+# ﻿pico-synth
 
 DONE - solder on some headers
 
