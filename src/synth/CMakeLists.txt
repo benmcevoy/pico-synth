@@ -7,9 +7,7 @@ pico_enable_stdio_usb(${projectName} 1)
 pico_enable_stdio_uart(${projectName} 0)
 
 # pull in common dependencies
-target_link_libraries(${projectName} pico_stdlib hardware_pwm hardware_dma pico_multicore)
+target_link_libraries(${projectName} pico_stdlib hardware_pwm hardware_dma)
 
 # create map/bin/hex/uf2 file etc.
 pico_add_extra_outputs(${projectName})
-
-
