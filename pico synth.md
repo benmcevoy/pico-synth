@@ -433,8 +433,65 @@ Like polling MIDI or ADC...
 
 Choice.
 
+### DMA/DREQ
+
+I'm struggling to see what benefit I would get here...
+
+It seems the DMA will stream data to the PWM on each WRAP IRQ, which is good
+
+Then a DMA IRQ will fire when it's buffer is empty?
+
+we can then more or less immediately swap buffers and let DMA continue while then going on to fill the next buffer
+
+which looks like it could all happen on core0
+
+in this way the PWM IRQ work becomes completely offloaded to hardware
+
+and the actual work of producing samples only needs to be checked for at the right time, when the buffer is empty
+
+ok.  so maybe i can see the benefit.
+
+This example is helpful, as it is basically what I want to do, ping-pong between two buffers.
+
+https://github.com/raspberrypi/pico-examples/issues/112#issuecomment-1405075256
+
+also
+
+https://github.com/GregAC/pico-stuff/blob/main/pwm_dma/pwm_dma_interrupt_sequence.c
+
+OK, let's give that a crack.
+
+managed to bodge that together.  It is working but sounds quite bad - buzzy.
+
+might look on the old oscilloscope.  A PICO SCOPE no less!
+
+the old way, just the irq on the pwm produces some PWMish looking stuff
+the new way produces a spike at 440Hz, click click click
+
+i assume my config is not good.
+
+i'll go read the pico-extras example of pwm audio.
+
+well, I came across some info - samples MUST be 16 bit.  I do not understand the data sheet, but this works.
+
+
 
 ## core0 synth
 
-## core1 midi
+when the time comes:
 
+I am not confident to be able to port my C# code, it's all higher order functions and what not, and not straight forward at all to convert to C AFAIK.
+
+But the maths is the same. so good enough as a reference.
+
+- define a voice struct
+- waveforms
+- phase accumulation 
+- trigger play new note
+- envelope control
+- filter
+- 
+
+## core1 midi (or adc knob twiddling)
+
+tbd
