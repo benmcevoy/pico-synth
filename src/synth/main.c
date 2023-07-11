@@ -1,38 +1,41 @@
-#include "pico/stdlib.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include <math.h>
+#include "pico/stdlib.h"
 #include "pico/time.h"
 #include "pico/multicore.h"
 #include "hardware/irq.h"
 #include "hardware/pwm.h"
+#include "hardware/clocks.h"
 
 #define PI 3.14159265358979323846
 #define PIN 26
-#define BUFFER_SIZE 1024
+#define BUFFER_SIZE 256
 
-volatile uint64_t _samplesElapsed = 0;
-volatile uint64_t _samplesElapsed1 = 0;
-char _sample = 0;
+uint64_t _samplesElapsed = 0;
+unsigned char _sample = 0;
 unsigned char _buffer1[BUFFER_SIZE];
 unsigned char _buffer2[BUFFER_SIZE];
-volatile bool _swap = false;
-int _f = 440;
+bool _swap = false;
+uint _f = 440;
 uint _index = 0;
+
+typedef struct AudioContext
+{
+    unsigned char (*AudioOut)[BUFFER_SIZE];
+    uint64_t SamplesElapsed;
+    uint SampleRate;
+} AudioContext_t;
+
+AudioContext_t *Context;
 
 void fillBuffer()
 {
     for (int i = 0; i < BUFFER_SIZE; i++)
     {
-        char value = (sin(PI * 2.0 * _f * (_samplesElapsed1 + i) / 21371) + 1.0) * 128;
+        char value = (sin(PI * 2.0 * _f * (Context->SamplesElapsed + i) / Context->SampleRate) + 1.0) * 128;
 
-        if (_swap)
-        {
-            _buffer2[i] = value;
-        }
-        else
-        {
-            _buffer1[i] = value;
-        }
+        (*Context->AudioOut)[i] = value;
     }
 }
 
@@ -45,12 +48,15 @@ void onPwmInterrupt()
         _swap = !_swap;
         _index = 0;
         // TODO: trigger fill IRQ
-        _samplesElapsed1 = _samplesElapsed;
+        Context->SamplesElapsed = _samplesElapsed;
+        Context->AudioOut = _swap ? &_buffer2 : &_buffer1;
+
         multicore_reset_core1();
         multicore_launch_core1(fillBuffer);
     }
 
     _sample = _swap ? _buffer1[_index] : _buffer2[_index];
+
     _index++;
     _samplesElapsed++;
 
@@ -63,6 +69,8 @@ int main()
     stdio_init_all();
     sleep_ms(1000);
     printf("Starting main\n");
+
+    Context = malloc(sizeof(AudioContext_t));
 
     gpio_set_function(PIN, GPIO_FUNC_PWM);
     gpio_set_function(PIN + 1, GPIO_FUNC_PWM);
@@ -79,13 +87,20 @@ int main()
 
     // set sample rate/clock to 125Mhz / wrap / div =   ~22kHz
     // rp2040 datasheet gives the actual formula, ignoring the phase correction bit
-    // period = (wrap+1)*(div + 15/16)
-    //
+    // period = (wrap+1)*(div + fraction)
+    // fraction is 4 bit resolution hence they divide by 16 in the datasheet
 
     pwm_config_set_clkdiv(&config, 11.f);
     pwm_config_set_wrap(&config, 254);
     pwm_config_set_phase_correct(&config, true);
     pwm_init(slice, &config, true);
+
+    uint systemClockHz = frequency_count_khz(CLOCKS_FC0_SRC_VALUE_CLK_SYS) * 1000;
+    // to my ear this sounds exactly like the wikipedia reference sample @440Hz
+    // no discernable beat frequency
+    // assume 125Mhz sys_clk gives us ~22281.64Hz
+
+    Context->SampleRate = systemClockHz / (11 * 2 * 255);
 
     // no pop
     pwm_set_gpio_level(PIN, 0);
