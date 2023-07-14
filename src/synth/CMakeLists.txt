@@ -1,6 +1,6 @@
 set(projectName "synth")
 
-add_executable(${projectName} main.c)
+add_executable(${projectName} main.c lib/waveform.c)
 
 # enable usb output, disable uart output
 pico_enable_stdio_usb(${projectName} 1)

@@ -1,27 +1,19 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <math.h>
 #include "pico/stdlib.h"
 #include "hardware/pwm.h"
 #include "hardware/clocks.h"
 #include "hardware/dma.h"
 
-#define PI 3.14159265358979323846
-#define PIN 26
-#define BUFFER_SIZE 512
+#include "include/audiocontext.h"
+#include "include/waveform.h"
 
-uint64_t _samplesElapsed = 0;
-unsigned short _buffer1[BUFFER_SIZE];
-unsigned short _buffer2[BUFFER_SIZE];
+#define PIN 26
+
+unsigned short _buffer1[BUFFER_SIZE] = {0};
+unsigned short _buffer2[BUFFER_SIZE] = {0};
 bool _swap = true;
 int _pwmDmaChannel;
-
-typedef struct AudioContext
-{
-    unsigned short (*AudioOut)[BUFFER_SIZE];
-    uint64_t SamplesElapsed;
-    uint SampleRate;
-} AudioContext_t;
 
 AudioContext_t *_context;
 
@@ -29,7 +21,10 @@ void synth_fillbuffer()
 {
     for (int i = 0; i < BUFFER_SIZE; i++)
     {
-        char value = (sin(PI * 2.0 * 440 * (_context->SamplesElapsed + i) / _context->SampleRate) + 1.0) * 127;
+        double sample = synth_waveform_sample(_context, SINE, 440, 0.1);
+
+        // scale to 8-bit
+        char value = (sample + 1.0) * 127;
 
         (*_context->AudioOut)[i] = value;
     }
@@ -42,15 +37,14 @@ void synth_dma_irq_handler()
 
     // swap buffers
     _swap = !_swap;
-    _samplesElapsed += BUFFER_SIZE;
 
-    _context->SamplesElapsed = _samplesElapsed;
+    _context->SamplesElapsed += BUFFER_SIZE;
     _context->AudioOut = _swap ? &_buffer2 : &_buffer1;
 
     // restart DMA
     dma_channel_transfer_from_buffer_now(_pwmDmaChannel, _swap ? &_buffer1 : &_buffer2, BUFFER_SIZE);
 
-    // fill buffer
+    // fill write buffer
     synth_fillbuffer();
 }
 
@@ -68,8 +62,8 @@ int main()
     uint slice = pwm_gpio_to_slice_num(PIN);
     pwm_config pwmConfig = pwm_get_default_config();
 
-    // set sample rate/clock to 125Mhz / wrap / div =   ~22kHz
-    // rp2040 datasheet gives the actual formula, ignoring the phase correction bit
+    // set sample rate/clock to 125Mhz / wrap+1 / div =   ~22kHz
+    // rp2040 datasheet gives the actual formula
     pwm_config_set_clkdiv(&pwmConfig, 11.f);
     pwm_config_set_wrap(&pwmConfig, 254);
     pwm_config_set_phase_correct(&pwmConfig, true);
