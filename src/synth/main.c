@@ -21,12 +21,14 @@ void synth_fillbuffer()
 {
     for (int i = 0; i < BUFFER_SIZE; i++)
     {
-        double sample = synth_waveform_sample(_context, SINE, 440, 0.1);
+        double sample = synth_waveform_sample(_context, TRIANGLE, 440, 0.3);
 
         // scale to 8-bit
         char value = (sample + 1.0) * 127;
 
         (*_context->AudioOut)[i] = value;
+
+        _context->SamplesElapsed += 1;
     }
 }
 
@@ -38,7 +40,6 @@ void synth_dma_irq_handler()
     // swap buffers
     _swap = !_swap;
 
-    _context->SamplesElapsed += BUFFER_SIZE;
     _context->AudioOut = _swap ? &_buffer2 : &_buffer1;
 
     // restart DMA

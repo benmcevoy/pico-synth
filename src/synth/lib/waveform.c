@@ -3,51 +3,59 @@
 #include "../include/waveform.h"
 #include "../include/audiocontext.h"
 
-static double _phase = 0;
+double _phase = 0;
 
-static double sine(AudioContext_t *context, double frequency, double amplitude)
+double sine(AudioContext_t *context, double frequency, double amplitude)
 {
-    _phase += M_PI * 2.0 * frequency / context->SampleRate;
+    _phase += TWOPI * frequency / context->SampleRate;
 
-    if (_phase >= 2.0 * M_PI)
-    {
-        _phase -= 2.0 * M_PI;
-    }
+    if (_phase >= TWOPI)
+        _phase -= TWOPI;
 
     return sin(_phase) * amplitude;
 }
 
-static double square(AudioContext_t *context, double frequency, double amplitude)
+double square(AudioContext_t *context, double frequency, double amplitude)
 {
     return 0;
 }
 
-static double saw(AudioContext_t *context, double frequency, double amplitude)
+double saw(AudioContext_t *context, double frequency, double amplitude)
 {
     return 0;
 }
 
-static double triangle(AudioContext_t *context, double frequency, double amplitude)
+double triangle(AudioContext_t *context, double frequency, double amplitude)
 {
-    return 0;
+    // TODO: well this don't sound right...
+    _phase += TWOPI * frequency / context->SampleRate;
+
+    if (_phase >= TWOPI)
+        _phase -= TWOPI;
+
+    return (asin(sin(_phase)) / M_PI_2) * amplitude;
 }
 
-static double noise(AudioContext_t *context, double frequency, double amplitude)
+double noise(AudioContext_t *context, double frequency, double amplitude)
 {
-    return 0;
+    // random between -1..1
+    return (rand() / (double)(RAND_MAX)) * 2 - 1;
 }
-
 
 double synth_waveform_sample(AudioContext_t *context, enum waveform waveform, double frequency, double amplitude)
 {
     if (waveform == SINE)
         return sine(context, frequency, amplitude);
+
     if (waveform == SQUARE)
         return square(context, frequency, amplitude);
+
     if (waveform == SAW)
         return saw(context, frequency, amplitude);
+
     if (waveform == TRIANGLE)
         return triangle(context, frequency, amplitude);
+
     if (waveform == NOISE)
         return noise(context, frequency, amplitude);
 
