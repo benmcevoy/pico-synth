@@ -33,7 +33,7 @@ double triangle(AudioContext_t *context, double frequency, double amplitude)
     if (_phase >= TWOPI)
         _phase -= TWOPI;
 
-    return (asin(sin(_phase)) / M_PI_2) * amplitude;
+    return (asin(cos(_phase)) / M_PI_2) * amplitude;
 }
 
 double noise(AudioContext_t *context, double frequency, double amplitude)

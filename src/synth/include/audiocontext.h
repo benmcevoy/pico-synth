@@ -4,13 +4,13 @@
 #include <stdlib.h>
 #include "pico/stdlib.h"
 
-#define BUFFER_SIZE 512
+#define BUFFER_LENGTH 512
 
 typedef struct AudioContext
 {
-    unsigned short (*AudioOut)[BUFFER_SIZE];
+    unsigned short *AudioOut;
     uint64_t SamplesElapsed;
-    uint SampleRate;
+    double SampleRate;
 } AudioContext_t;
 
 #endif 

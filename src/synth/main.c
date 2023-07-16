@@ -10,23 +10,23 @@
 
 #define PIN 26
 
-unsigned short _buffer1[BUFFER_SIZE] = {0};
-unsigned short _buffer2[BUFFER_SIZE] = {0};
+unsigned short _buffer1[BUFFER_LENGTH] = {0};
+unsigned short _buffer2[BUFFER_LENGTH] = {0};
 bool _swap = true;
 int _pwmDmaChannel;
 
 AudioContext_t *_context;
 
-void synth_fillbuffer()
+void synth_fill_write_buffer()
 {
-    for (int i = 0; i < BUFFER_SIZE; i++)
+    for (int i = 0; i < BUFFER_LENGTH; i++)
     {
         double sample = synth_waveform_sample(_context, TRIANGLE, 440, 0.3);
 
         // scale to 8-bit
         char value = (sample + 1.0) * 127;
 
-        (*_context->AudioOut)[i] = value;
+        _context->AudioOut[i] = value;
 
         _context->SamplesElapsed += 1;
     }
@@ -40,19 +40,50 @@ void synth_dma_irq_handler()
     // swap buffers
     _swap = !_swap;
 
-    _context->AudioOut = _swap ? &_buffer2 : &_buffer1;
+    _context->AudioOut = _swap ? _buffer1 : _buffer2;
 
     // restart DMA
-    dma_channel_transfer_from_buffer_now(_pwmDmaChannel, _swap ? &_buffer1 : &_buffer2, BUFFER_SIZE);
+    dma_channel_transfer_from_buffer_now(_pwmDmaChannel, _swap ? _buffer2 : _buffer1, BUFFER_LENGTH);
 
     // fill write buffer
-    synth_fillbuffer();
+    synth_fill_write_buffer();
 }
 
 int main()
 {
+
     stdio_init_all();
-    // sleep_ms(1000);
+    sleep_ms(1000);
+    printf("Starting main\n");
+
+    _context = malloc(sizeof(AudioContext_t));
+    // derive sample rate
+    uint systemClockHz = frequency_count_khz(CLOCKS_FC0_SRC_VALUE_CLK_SYS) * 1000;
+    _context->SampleRate = systemClockHz / (double)(11 * 2 * 255);
+
+    _context->AudioOut = _buffer1;
+
+    synth_fill_write_buffer();
+
+    _context->AudioOut = _buffer2;
+
+    synth_fill_write_buffer();
+
+    for (int i = 0; i < BUFFER_LENGTH; i++)
+    {
+        printf("%hu\n", _buffer1[i]);
+    }
+
+    for (int i = 0; i < BUFFER_LENGTH; i++)
+    {
+        printf("%hu\n", _buffer2[i]);
+    }
+}
+
+int main2()
+{
+    stdio_init_all();
+    sleep_ms(1000);
     printf("Starting main\n");
 
     _context = malloc(sizeof(AudioContext_t));
@@ -72,7 +103,7 @@ int main()
 
     // derive sample rate
     uint systemClockHz = frequency_count_khz(CLOCKS_FC0_SRC_VALUE_CLK_SYS) * 1000;
-    _context->SampleRate = systemClockHz / (11 * 2 * 255);
+    _context->SampleRate = systemClockHz / (double)(11 * 2 * 255);
 
     // setup dma
     _pwmDmaChannel = dma_claim_unused_channel(true);
@@ -88,8 +119,8 @@ int main()
         _pwmDmaChannel,
         &dmaConfig,
         &pwm_hw->slice[slice].cc, // Write to PWM counter compare
-        NULL,                     // read from buffer
-        BUFFER_SIZE,              // number of transfers to perform
+        &_buffer1,                // read from buffer
+        BUFFER_LENGTH,              // number of transfers to perform
         true                      // start
     );
 

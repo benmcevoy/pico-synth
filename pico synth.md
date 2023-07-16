@@ -492,6 +492,57 @@ But the maths is the same. so good enough as a reference.
 - filter
 - 
 
+oh my.
+
+SO a sinewave, that was fine and dandy.
+Noise, no problem.
+
+Triangle?
+
+blimey.
+
+```c
+double triangle(AudioContext_t *context, double frequency, double amplitude)
+{
+    // TODO: well this don't sound right...
+    _phase += TWOPI * frequency / context->SampleRate;
+
+    if (_phase >= TWOPI)
+        _phase -= TWOPI;
+
+    return (asin(sin(_phase)) / M_PI_2) * amplitude;
+}
+```
+
+which is more or less the same as c#
+
+```c#
+        /// <summary>
+        /// A triangle wave form.
+        /// </summary>
+        public static W Triangle() => (t, f, w, p) => Amplitude.Scale(Asin(Sin(Angle(f, t))) / HalfPI);
+
+        public static double Angle(double t, double f) => TwoPI * f * t;
+
+```
+
+Time here is essentially SamplesElapsed/SampleRate.
+
+In C# there is implicit conversion to double.  In C there is not.
+
+The C code avoids this time calculation but has some odd phase discontinuity which I can't work out...
+
+With a small buffer it sounded very odd, very distorted.
+At a larger buffer size I hear the click as it jumps in phase.
+
+I can printf out the contents of the buffers
+and it is a nice looking triangle wave.
+
+much confused
+
+
+
+
 ## core1 midi (or adc knob twiddling)
 
 tbd
