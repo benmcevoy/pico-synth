@@ -21,14 +21,13 @@ void synth_fill_write_buffer()
 {
     for (int i = 0; i < BUFFER_LENGTH; i++)
     {
-        double sample = synth_waveform_sample(_context, TRIANGLE, 440, 0.3);
+        double sample = synth_waveform_sample(_context);
 
         // scale to 8-bit
         char value = (sample + 1.0) * 127;
 
         _context->AudioOut[i] = value;
-
-        _context->SamplesElapsed += 1;
+        _context->SamplesElapsed++;
     }
 }
 
@@ -49,9 +48,8 @@ void synth_dma_irq_handler()
     synth_fill_write_buffer();
 }
 
-int main()
+int main2()
 {
-
     stdio_init_all();
     sleep_ms(1000);
     printf("Starting main\n");
@@ -60,7 +58,7 @@ int main()
     // derive sample rate
     uint systemClockHz = frequency_count_khz(CLOCKS_FC0_SRC_VALUE_CLK_SYS) * 1000;
     _context->SampleRate = systemClockHz / (double)(11 * 2 * 255);
-
+    _context->SamplesElapsed = 0;
     _context->AudioOut = _buffer1;
 
     synth_fill_write_buffer();
@@ -80,11 +78,9 @@ int main()
     }
 }
 
-int main2()
+int main()
 {
     stdio_init_all();
-    sleep_ms(1000);
-    printf("Starting main\n");
 
     _context = malloc(sizeof(AudioContext_t));
 
@@ -104,6 +100,10 @@ int main2()
     // derive sample rate
     uint systemClockHz = frequency_count_khz(CLOCKS_FC0_SRC_VALUE_CLK_SYS) * 1000;
     _context->SampleRate = systemClockHz / (double)(11 * 2 * 255);
+    _context->SamplesElapsed = 0;
+    _context->Voice.amplitude = 0.3;
+    _context->Voice.frequency = 440;
+    _context->Voice.waveform = SINE;
 
     // setup dma
     _pwmDmaChannel = dma_claim_unused_channel(true);
@@ -120,7 +120,7 @@ int main2()
         &dmaConfig,
         &pwm_hw->slice[slice].cc, // Write to PWM counter compare
         &_buffer1,                // read from buffer
-        BUFFER_LENGTH,              // number of transfers to perform
+        BUFFER_LENGTH,            // number of transfers to perform
         true                      // start
     );
 
@@ -129,5 +129,14 @@ int main2()
     irq_set_enabled(DMA_IRQ_0, true);
 
     while (true)
-        tight_loop_contents();
+    {
+        _context->Voice.frequency = 440;
+        sleep_ms(200);
+        _context->Voice.frequency = 660;
+        sleep_ms(200);
+        _context->Voice.frequency = 880;
+        sleep_ms(200);
+        _context->Voice.frequency = 660;
+        sleep_ms(200);
+    }
 }

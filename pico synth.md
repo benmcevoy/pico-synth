@@ -485,8 +485,8 @@ I am not confident to be able to port my C# code, it's all higher order function
 But the maths is the same. so good enough as a reference.
 
 - define a voice struct
-- waveforms
-- phase accumulation 
+DONE - waveforms
+DONE - phase accumulation 
 - trigger play new note
 - envelope control
 - filter
@@ -500,6 +500,8 @@ Noise, no problem.
 Triangle?
 
 blimey.
+
+
 
 ```c
 double triangle(AudioContext_t *context, double frequency, double amplitude)
@@ -540,8 +542,55 @@ and it is a nice looking triangle wave.
 
 much confused
 
+Square - OK. I have ignored pulsewidth for now.
+Saw - OK.  
+
+ok that's waveform now.
+
+### trigger play note
+
+hmmm.  
+
+simply :
+
+some player, that sets a frequency, sleeps for some time, sets a new frequency, etc loop
+
+at this point we need some kind of context to represent state
+
+let's add a Voice struct to the audio context.
+
+Voice:
+ frequency
+ waveform
+
+good enough for now.
+
+```c
+typedef struct Voice
+{
+    double frequency;
+    enum waveform waveform;
+
+} Voice_t;
+```
+
+```c
 
 
+    while (true)
+    {
+        _context->Voice.frequency = 440;
+        sleep_ms(200);
+        _context->Voice.frequency = 660;
+        sleep_ms(200);
+        _context->Voice.frequency = 880;
+        sleep_ms(200);
+        _context->Voice.frequency = 660;
+        sleep_ms(200);
+    }
+```
+
+does it for me.
 
 ## core1 midi (or adc knob twiddling)
 

@@ -15,14 +15,6 @@
 #define TWOPI		6.28318530717958647692	/* pi*2 */
 #endif
 
-enum waveform {
-    SINE = 0,
-    SQUARE,
-    SAW,
-    TRIANGLE,
-    NOISE
-};
-
 /*! \brief Generate an audio sample
  *
  * \param context The audio context
@@ -30,6 +22,6 @@ enum waveform {
  * \param frequency Frequency in hertz
  * \param amplitude between 0.0 and 1.0, where 1.0 is maximum volume
  */
-double synth_waveform_sample(AudioContext_t *context, enum waveform waveform, double frequency, double amplitude);
+double synth_waveform_sample(AudioContext_t *context);
 
 #endif

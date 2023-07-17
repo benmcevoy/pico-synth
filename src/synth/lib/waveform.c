@@ -5,8 +5,19 @@
 
 double _phase = 0;
 
-double sine(AudioContext_t *context, double frequency, double amplitude)
+double sign(double value)
 {
+    if (value == 0)
+        return 0;
+
+    return value < 0 ? -1 : 1;
+}
+
+double sine(AudioContext_t *context)
+{
+    double frequency = context->Voice.frequency;
+    double amplitude  = context->Voice.amplitude;
+
     _phase += TWOPI * frequency / context->SampleRate;
 
     if (_phase >= TWOPI)
@@ -15,20 +26,35 @@ double sine(AudioContext_t *context, double frequency, double amplitude)
     return sin(_phase) * amplitude;
 }
 
-double square(AudioContext_t *context, double frequency, double amplitude)
+double square(AudioContext_t *context)
 {
-    return 0;
-}
+    double frequency = context->Voice.frequency;
+    double amplitude  = context->Voice.amplitude;
 
-double saw(AudioContext_t *context, double frequency, double amplitude)
-{
-    return 0;
-}
-
-double triangle(AudioContext_t *context, double frequency, double amplitude)
-{
-    // TODO: well this don't sound right...
     _phase += TWOPI * frequency / context->SampleRate;
+
+    if (_phase >= TWOPI)
+        _phase -= TWOPI;
+
+    return amplitude * sign(sin(_phase));
+}
+
+double saw(AudioContext_t *context)
+{
+    double frequency = context->Voice.frequency;
+    double amplitude  = context->Voice.amplitude;
+    double time = (double)context->SamplesElapsed / context->SampleRate;
+    double period = 1.0 / frequency;
+
+    return amplitude * (fmod(time, period) * frequency);
+}
+
+double triangle(AudioContext_t *context)
+{
+    double frequency = context->Voice.frequency;
+    double amplitude  = context->Voice.amplitude;
+    // TODO: well this don't sound right...
+        _phase += TWOPI * frequency / context->SampleRate;
 
     if (_phase >= TWOPI)
         _phase -= TWOPI;
@@ -36,28 +62,30 @@ double triangle(AudioContext_t *context, double frequency, double amplitude)
     return (asin(cos(_phase)) / M_PI_2) * amplitude;
 }
 
-double noise(AudioContext_t *context, double frequency, double amplitude)
+double noise(AudioContext_t *context)
 {
     // random between -1..1
     return (rand() / (double)(RAND_MAX)) * 2 - 1;
 }
 
-double synth_waveform_sample(AudioContext_t *context, enum waveform waveform, double frequency, double amplitude)
+double synth_waveform_sample(AudioContext_t *context)
 {
+    enum waveform waveform = context->Voice.waveform;
+
     if (waveform == SINE)
-        return sine(context, frequency, amplitude);
+        return sine(context);
 
     if (waveform == SQUARE)
-        return square(context, frequency, amplitude);
+        return square(context);
 
     if (waveform == SAW)
-        return saw(context, frequency, amplitude);
+        return saw(context);
 
     if (waveform == TRIANGLE)
-        return triangle(context, frequency, amplitude);
+        return triangle(context);
 
     if (waveform == NOISE)
-        return noise(context, frequency, amplitude);
+        return noise(context);
 
     return 0;
 }
