@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 #include "pico/stdlib.h"
 #include "hardware/pwm.h"
 #include "hardware/clocks.h"
@@ -7,14 +8,16 @@
 
 #include "include/audiocontext.h"
 #include "include/waveform.h"
+#include "include/pitchtable.h"
+
+#include "test.h"
 
 #define PIN 26
 
+unsigned short _buffer0[BUFFER_LENGTH] = {0};
 unsigned short _buffer1[BUFFER_LENGTH] = {0};
-unsigned short _buffer2[BUFFER_LENGTH] = {0};
-bool _swap = true;
+bool _swap = false;
 int _pwmDmaChannel;
-
 AudioContext_t *_context;
 
 void synth_fill_write_buffer()
@@ -23,28 +26,26 @@ void synth_fill_write_buffer()
     {
         double sample = synth_waveform_sample(_context);
 
-        // scale to 8-bit
-        char value = (sample + 1.0) * 127;
+        // scale to 8 bit in a 16-bit container
+        unsigned short value = (sample + 1.f) * 127.f;
 
         _context->AudioOut[i] = value;
         _context->SamplesElapsed++;
     }
 }
 
-void synth_dma_irq_handler()
+static void __isr __time_critical_func(synth_dma_irq_handler)()
 {
-    // ack irq
-    dma_hw->ints0 = 1u << _pwmDmaChannel;
-
-    // swap buffers
+    // cycle buffers
     _swap = !_swap;
 
-    _context->AudioOut = _swap ? _buffer1 : _buffer2;
-
+    // ack irq
+    dma_hw->ints0 = 1u << _pwmDmaChannel;
     // restart DMA
-    dma_channel_transfer_from_buffer_now(_pwmDmaChannel, _swap ? _buffer2 : _buffer1, BUFFER_LENGTH);
+    dma_channel_transfer_from_buffer_now(_pwmDmaChannel, _swap ? _buffer0 : _buffer1, BUFFER_LENGTH);
 
     // fill write buffer
+    _context->AudioOut = _swap ? _buffer1 : _buffer0;
     synth_fill_write_buffer();
 }
 
@@ -59,23 +60,31 @@ int main2()
     uint systemClockHz = frequency_count_khz(CLOCKS_FC0_SRC_VALUE_CLK_SYS) * 1000;
     _context->SampleRate = systemClockHz / (double)(11 * 2 * 255);
     _context->SamplesElapsed = 0;
-    _context->AudioOut = _buffer1;
+    _context->Voice.amplitude = 0.3;
+    _context->Voice.frequency = 440;
+    _context->Voice.waveform = TRIANGLE;
 
-    synth_fill_write_buffer();
-
-    _context->AudioOut = _buffer2;
-
-    synth_fill_write_buffer();
-
-    for (int i = 0; i < BUFFER_LENGTH; i++)
+    for (int i = 0; i < 2048; i++)
     {
-        printf("%hu\n", _buffer1[i]);
+        double sample = synth_waveform_sample(_context);
+
+        if (sample == NAN)
+        {
+            printf("sample %d was NAN\n", i);
+        }
+
+        // scale to 8 bit in a 16-bit container
+        unsigned short value = (sample + 1.f) * 127.f;
+
+        if (value == NAN)
+        {
+            printf("value %d was NAN\n", i);
+        }
+
+        _context->SamplesElapsed++;
     }
 
-    for (int i = 0; i < BUFFER_LENGTH; i++)
-    {
-        printf("%hu\n", _buffer2[i]);
-    }
+    printf("Ending main\n");
 }
 
 int main()
@@ -92,18 +101,19 @@ int main()
 
     // set sample rate/clock to 125Mhz / wrap+1 / div =   ~22kHz
     // rp2040 datasheet gives the actual formula
-    pwm_config_set_clkdiv(&pwmConfig, 11.f);
+    float clk_div = 22.f;
+    pwm_config_set_clkdiv(&pwmConfig, clk_div);
     pwm_config_set_wrap(&pwmConfig, 254);
-    pwm_config_set_phase_correct(&pwmConfig, true);
+    // pwm_config_set_phase_correct(&pwmConfig, true);
     pwm_init(slice, &pwmConfig, true);
 
     // derive sample rate
     uint systemClockHz = frequency_count_khz(CLOCKS_FC0_SRC_VALUE_CLK_SYS) * 1000;
-    _context->SampleRate = systemClockHz / (double)(11 * 2 * 255);
+    _context->SampleRate = systemClockHz / (double)(clk_div * 255);
     _context->SamplesElapsed = 0;
     _context->Voice.amplitude = 0.3;
     _context->Voice.frequency = 440;
-    _context->Voice.waveform = SINE;
+    _context->Voice.waveform = SAW;
 
     // setup dma
     _pwmDmaChannel = dma_claim_unused_channel(true);
@@ -119,7 +129,7 @@ int main()
         _pwmDmaChannel,
         &dmaConfig,
         &pwm_hw->slice[slice].cc, // Write to PWM counter compare
-        &_buffer1,                // read from buffer
+        &_buffer0,                // read from buffer
         BUFFER_LENGTH,            // number of transfers to perform
         true                      // start
     );
@@ -130,13 +140,6 @@ int main()
 
     while (true)
     {
-        _context->Voice.frequency = 440;
-        sleep_ms(200);
-        _context->Voice.frequency = 660;
-        sleep_ms(200);
-        _context->Voice.frequency = 880;
-        sleep_ms(200);
-        _context->Voice.frequency = 660;
-        sleep_ms(200);
+        synth_play_test(_context);
     }
 }

@@ -27,6 +27,9 @@
         "utility": "c",
         "variant": "c",
         "istream": "c",
-        "ostream": "c"
+        "ostream": "c",
+        "bitset": "c",
+        "chrono": "c",
+        "pitchtable.h": "c"
     }
 }

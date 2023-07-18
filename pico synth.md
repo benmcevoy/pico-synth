@@ -575,8 +575,6 @@ typedef struct Voice
 ```
 
 ```c
-
-
     while (true)
     {
         _context->Voice.frequency = 440;
@@ -592,6 +590,87 @@ typedef struct Voice
 
 does it for me.
 
+next up:
+
+DONE - a frequency/note table
+NAH DO IT LATER - multiple voices which will create an audioframe
+NAH DO IT LATER - mix the voices
+
+now i can test things a bit better
+it sounds fairly crap lol :)
+
+the waveforms have phase accumulation errors.  
+and using sleep_ms instead of something tied to the sample rate makes... not much sense
+
+OK.  So what seems to be happening is,
+
+the waveform LOOKS good when i log it out and graph it.  it's perfect.
+
+the code CRASHES when the buffer swaps ONLY on triangle. and the dma IRQ keeps on playing the same buffer over and over
+
+hence the clicking...
+
+why you crash?
+
+to debug I need a SWD debugger - the best option is another pico, which I do not have to hand unless I rip apart something else, which I don't wanna do...
+
+but knowing that it is actually crashing and not some phase problem as i thought may be enough to triage that bad boy
+
+ok.  after some stuffing around it seems that arcsine is too slow and the buffers get corrupted.  the assertion is that arcsine is slower than 1/SampleRate seconds
+
+so let's set the sample rate to 16384 or 8000 or something and see...
+
+yep.  works* but sounds like crap.  ok. 
+
+i wasn't expecting this kind of time budget.
+
+hello stackoverflow:
+
+https://stackoverflow.com/questions/3380628/fast-arc-cos-algorithm
+
+```c
+double acos(x) {
+   return (-0.69813170079773212 * x * x - 0.87266462599716477) * x + M_PI_2;
+}
+```
+
+this is fast enough and sounds OK.
+scanning through the ARM M0+ datasheets looks like trig is not on the chip.
+could consider a Lookup table instead i suppose.
+
+
+ARM provides CMSIS-DSP optimised libraries.  
+seems I have arm_math.h, does it have arccos or arcsin?
+
+appears not.  but i do see a bunch of FIR filter functions.  looks interesting.
+
+seems with the approximate arccos i can ran at 35kHz, so I have a little headroom if i am targeting 22kHz.
+and I can always overclock.
+
+DO i need to look at the emitted assembly?  Oh my C...
+
+No issues in the C# version, but then again it was running on a processer that is 30+ times faster with trig intrinsics...
+
+### Envelope
+
+remove amplitude from Voice_t and let envelope control it
+
+NoteOn - trigger attack-decay-sustain (onset)
+NoteOff - trigger release
+
+
+
 ## core1 midi (or adc knob twiddling)
 
+
 tbd
+
+there is _TUSB_MIDI_DEVICE_H_  tinyusb midi device
+
+add midi note number table
+add midi command noteon, noteoff
+
+midi events should be in a FIFO queue that is supplied with the current write buffer
+so we can catch up on what and when
+but tinyusb should be doing this i assume.
+

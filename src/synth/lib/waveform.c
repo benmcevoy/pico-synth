@@ -3,7 +3,7 @@
 #include "../include/waveform.h"
 #include "../include/audiocontext.h"
 
-double _phase = 0;
+volatile double _phase = 0;
 
 double sign(double value)
 {
@@ -13,10 +13,14 @@ double sign(double value)
     return value < 0 ? -1 : 1;
 }
 
+double arccos(double x) {
+   return (-0.69813170079773212 * x * x - 0.87266462599716477) * x + M_PI_2;
+}
+
 double sine(AudioContext_t *context)
 {
     double frequency = context->Voice.frequency;
-    double amplitude  = context->Voice.amplitude;
+    double amplitude = context->Voice.amplitude;
 
     _phase += TWOPI * frequency / context->SampleRate;
 
@@ -29,7 +33,7 @@ double sine(AudioContext_t *context)
 double square(AudioContext_t *context)
 {
     double frequency = context->Voice.frequency;
-    double amplitude  = context->Voice.amplitude;
+    double amplitude = context->Voice.amplitude;
 
     _phase += TWOPI * frequency / context->SampleRate;
 
@@ -42,7 +46,7 @@ double square(AudioContext_t *context)
 double saw(AudioContext_t *context)
 {
     double frequency = context->Voice.frequency;
-    double amplitude  = context->Voice.amplitude;
+    double amplitude = context->Voice.amplitude;
     double time = (double)context->SamplesElapsed / context->SampleRate;
     double period = 1.0 / frequency;
 
@@ -52,14 +56,14 @@ double saw(AudioContext_t *context)
 double triangle(AudioContext_t *context)
 {
     double frequency = context->Voice.frequency;
-    double amplitude  = context->Voice.amplitude;
-    // TODO: well this don't sound right...
-        _phase += TWOPI * frequency / context->SampleRate;
+    double amplitude = context->Voice.amplitude;
+
+    _phase += TWOPI * frequency / context->SampleRate;
 
     if (_phase >= TWOPI)
         _phase -= TWOPI;
 
-    return (asin(cos(_phase)) / M_PI_2) * amplitude;
+    return (arccos(cos(_phase)) / M_PI_2) * amplitude;
 }
 
 double noise(AudioContext_t *context)

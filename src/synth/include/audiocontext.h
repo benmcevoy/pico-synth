@@ -16,10 +16,9 @@ enum waveform {
 
 typedef struct Voice
 {
-    double frequency;
-    enum waveform waveform;
+    volatile double frequency;
+    volatile enum waveform waveform;
     double amplitude;
-
 } Voice_t;
 
 typedef struct AudioContext
@@ -29,7 +28,5 @@ typedef struct AudioContext
     double SampleRate;
     Voice_t Voice;
 } AudioContext_t;
-
-
 
 #endif 
