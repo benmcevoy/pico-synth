@@ -9,3 +9,4 @@ src/build/
 nohup.out
 .envrc
 
+!src/build/synth.uf2

@@ -24,12 +24,12 @@ void synth_fill_write_buffer()
 {
     for (int i = 0; i < BUFFER_LENGTH; i++)
     {
-        double sample = synth_waveform_sample(_context);
+        float sample = synth_waveform_sample(_context);
 
         // scale to 8 bit in a 16-bit container
         unsigned short value = (sample + 1.f) * 127.f;
 
-        _context->AudioOut[i] = value;
+        _context->AudioOut[i] = value * _context->Volume;
         _context->SamplesElapsed++;
     }
 }
@@ -63,7 +63,7 @@ int main()
 
     // set sample rate/clock to 125Mhz / wrap+1 / div =   ~22kHz
     // rp2040 datasheet gives the actual formula
-    float clk_div = 22.f;
+    float clk_div = 8.f;
     pwm_config_set_clkdiv(&pwmConfig, clk_div);
     pwm_config_set_wrap(&pwmConfig, 254);
     // pwm_config_set_phase_correct(&pwmConfig, true);
@@ -73,7 +73,7 @@ int main()
     uint systemClockHz = frequency_count_khz(CLOCKS_FC0_SRC_VALUE_CLK_SYS) * 1000;
     _context->SampleRate = systemClockHz / (double)(clk_div * 255);
     _context->SamplesElapsed = 0;
-    _context->Voice.amplitude = 0.3;
+    _context->Volume = 0.3;
     _context->Voice.frequency = 440;
     _context->Voice.waveform = SAW;
 

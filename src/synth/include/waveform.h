@@ -22,6 +22,6 @@
  * \param frequency Frequency in hertz
  * \param amplitude between 0.0 and 1.0, where 1.0 is maximum volume
  */
-double synth_waveform_sample(AudioContext_t *context);
+float synth_waveform_sample(AudioContext_t *context);
 
 #endif
