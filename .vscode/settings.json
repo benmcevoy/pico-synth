@@ -5,7 +5,6 @@
         "algorithm": "c",
         "pwm.h": "c",
         "stdio.h": "c",
-        "audio_pwm.h": "c",
         "audio.h": "c",
         "multicore.h": "c",
         "cmath": "c",

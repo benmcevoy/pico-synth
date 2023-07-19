@@ -696,6 +696,8 @@ table for triangle generated:
     }
 
 ```
+wow.  i use float instead of double and now can run at ~82kHz
+
 
 
 ### Envelope

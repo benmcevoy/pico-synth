@@ -8,7 +8,7 @@
 #include "include/waveform.h"
 #include "include/pitchtable.h"
 
-void test_waveform(AudioContext_t *context, enum waveform waveform)
+void test_waveform(AudioContext_t *context, Waveform_t waveform)
 {
     context->Voice.waveform = waveform;
 
@@ -25,7 +25,7 @@ void test_waveform(AudioContext_t *context, enum waveform waveform)
     sleep_ms(200);
 }
 
-void test_sweep(AudioContext_t *context, enum waveform waveform)
+void test_sweep(AudioContext_t *context, Waveform_t waveform)
 {
     context->Voice.waveform = waveform;
     for (size_t i = PITCH_A4; i < PITCH_A5; i++)

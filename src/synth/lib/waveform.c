@@ -52,7 +52,7 @@ float noise(AudioContext_t *context)
 
 float synth_waveform_sample(AudioContext_t *context)
 {
-    enum waveform waveform = context->Voice.waveform;
+    Waveform_t waveform = context->Voice.waveform;
 
     if (waveform == SINE)
         return read_from_wt(context, SineWaveTable);

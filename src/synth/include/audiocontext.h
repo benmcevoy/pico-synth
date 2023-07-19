@@ -6,18 +6,18 @@
 
 #define BUFFER_LENGTH 512
 
-enum waveform {
+typedef enum Waveform {
     SINE = 0,
     SQUARE,
     SAW,
     TRIANGLE,
     NOISE
-};
+} Waveform_t;
 
 typedef struct Voice
 {
     float frequency;
-    enum waveform waveform;
+    Waveform_t waveform;
 } Voice_t;
 
 typedef struct AudioContext

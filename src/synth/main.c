@@ -20,17 +20,17 @@ bool _swap = false;
 int _pwmDmaChannel;
 AudioContext_t *_context;
 
-void synth_fill_write_buffer()
+void synth_fill_write_buffer(AudioContext_t *context)
 {
     for (int i = 0; i < BUFFER_LENGTH; i++)
     {
-        float sample = synth_waveform_sample(_context);
+        float sample = synth_waveform_sample(context);
 
         // scale to 8 bit in a 16-bit container
         unsigned short value = (sample + 1.f) * 127.f;
 
-        _context->AudioOut[i] = value * _context->Volume;
-        _context->SamplesElapsed++;
+        context->AudioOut[i] = value * context->Volume;
+        context->SamplesElapsed++;
     }
 }
 
@@ -46,16 +46,23 @@ static void __isr __time_critical_func(synth_dma_irq_handler)()
 
     // fill write buffer
     _context->AudioOut = _swap ? _buffer1 : _buffer0;
-    synth_fill_write_buffer();
+
+    synth_fill_write_buffer(_context);
 }
 
-int main()
-{
-    stdio_init_all();
-
+void synth_init_audio_context(float clk_div){
+    // derive sample rate
+    uint systemClockHz = frequency_count_khz(CLOCKS_FC0_SRC_VALUE_CLK_SYS) * 1000;
     _context = malloc(sizeof(AudioContext_t));
+    _context->SampleRate = (float)systemClockHz / clk_div * 255.f;
+    _context->SamplesElapsed = 0;
+    _context->Volume = 0.3;
+    _context->Voice.frequency = 440;
+    _context->Voice.waveform = SAW;
+}
 
-    // setup pwm
+uint synth_init_pwm(float clk_div){
+     // setup pwm
     gpio_set_function(PIN, GPIO_FUNC_PWM);
     gpio_set_function(PIN + 1, GPIO_FUNC_PWM);
     uint slice = pwm_gpio_to_slice_num(PIN);
@@ -63,21 +70,17 @@ int main()
 
     // set sample rate/clock to 125Mhz / wrap+1 / div =   ~22kHz
     // rp2040 datasheet gives the actual formula
-    float clk_div = 8.f;
+    
     pwm_config_set_clkdiv(&pwmConfig, clk_div);
     pwm_config_set_wrap(&pwmConfig, 254);
     // pwm_config_set_phase_correct(&pwmConfig, true);
     pwm_init(slice, &pwmConfig, true);
+    
+    return slice;
+}
 
-    // derive sample rate
-    uint systemClockHz = frequency_count_khz(CLOCKS_FC0_SRC_VALUE_CLK_SYS) * 1000;
-    _context->SampleRate = systemClockHz / (double)(clk_div * 255);
-    _context->SamplesElapsed = 0;
-    _context->Volume = 0.3;
-    _context->Voice.frequency = 440;
-    _context->Voice.waveform = SAW;
-
-    // setup dma
+void synth_init_dma(uint slice){
+        // setup dma
     _pwmDmaChannel = dma_claim_unused_channel(true);
 
     dma_channel_config dmaConfig = dma_channel_get_default_config(_pwmDmaChannel);
@@ -99,6 +102,16 @@ int main()
     dma_channel_set_irq0_enabled(_pwmDmaChannel, true);
     irq_set_exclusive_handler(DMA_IRQ_0, synth_dma_irq_handler);
     irq_set_enabled(DMA_IRQ_0, true);
+}
+
+int main()
+{
+    stdio_init_all(); 
+    
+    float clk_div = 11.f;
+    uint slice = synth_init_pwm(clk_div);
+    synth_init_audio_context(clk_div);
+    synth_init_dma(slice);
 
     while (true)
     {
