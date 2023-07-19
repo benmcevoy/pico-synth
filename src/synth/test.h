@@ -40,13 +40,13 @@ void synth_play_test(AudioContext_t *context)
     test_waveform(context, TRIANGLE);
     test_waveform(context, SAW);
     test_waveform(context, SQUARE);
-    test_waveform(context, NOISE);
+    test_waveform(context, SINE);
 
-    test_sweep(context, SINE);
+    test_sweep(context, NOISE);
     test_sweep(context, TRIANGLE);
     test_sweep(context, SAW);
     test_sweep(context, SQUARE);
-    test_sweep(context, NOISE);
+    test_sweep(context, SINE);
 }
 
 #endif

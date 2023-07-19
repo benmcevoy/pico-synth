@@ -651,6 +651,53 @@ DO i need to look at the emitted assembly?  Oh my C...
 
 No issues in the C# version, but then again it was running on a processer that is 30+ times faster with trig intrinsics...
 
+### Wavetable
+
+as per the Bela example with linear iterpolation:
+
+```c
+
+double triangle_wt(AudioContext_t *context)
+{
+    uint indexBelow = floor(_readPointer);
+    uint indexAbove = indexBelow + 1;
+
+    if (indexAbove >= WAVE_TABLE_LENGTH)
+        indexAbove -= WAVE_TABLE_LENGTH;
+
+    double fractionAbove = _readPointer - indexBelow;
+    double fractionBelow = 1.f - fractionAbove;
+
+    double value = context->Voice.amplitude * 
+        (fractionBelow * _triangleWaveTable[indexBelow] + fractionAbove * _triangleWaveTable[indexAbove]);
+
+    _readPointer += WAVE_TABLE_LENGTH * context->Voice.frequency / context->SampleRate;
+
+    while (_readPointer >= WAVE_TABLE_LENGTH)
+        _readPointer -= WAVE_TABLE_LENGTH;
+
+    return value;
+}
+
+```
+
+can now run at ~55khz
+
+table for triangle generated:
+```c
+    for(unsigned int n = 0; n <WAVE_TABLE_LENGTH/2; n++)
+    {
+        _triangleWaveTable[n] = -1.0 + 4.0 *(float)n/(float)WAVE_TABLE_LENGTH;
+    }
+    
+    for(unsigned int n = WAVE_TABLE_LENGTH/2.f; n <WAVE_TABLE_LENGTH; n++)
+    {
+        _triangleWaveTable[n] = 1.0 - 4.0 *(float)(n- WAVE_TABLE_LENGTH/2.f)/(float)WAVE_TABLE_LENGTH;
+    }
+
+```
+
+
 ### Envelope
 
 remove amplitude from Voice_t and let envelope control it

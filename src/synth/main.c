@@ -49,44 +49,6 @@ static void __isr __time_critical_func(synth_dma_irq_handler)()
     synth_fill_write_buffer();
 }
 
-int main2()
-{
-    stdio_init_all();
-    sleep_ms(1000);
-    printf("Starting main\n");
-
-    _context = malloc(sizeof(AudioContext_t));
-    // derive sample rate
-    uint systemClockHz = frequency_count_khz(CLOCKS_FC0_SRC_VALUE_CLK_SYS) * 1000;
-    _context->SampleRate = systemClockHz / (double)(11 * 2 * 255);
-    _context->SamplesElapsed = 0;
-    _context->Voice.amplitude = 0.3;
-    _context->Voice.frequency = 440;
-    _context->Voice.waveform = TRIANGLE;
-
-    for (int i = 0; i < 2048; i++)
-    {
-        double sample = synth_waveform_sample(_context);
-
-        if (sample == NAN)
-        {
-            printf("sample %d was NAN\n", i);
-        }
-
-        // scale to 8 bit in a 16-bit container
-        unsigned short value = (sample + 1.f) * 127.f;
-
-        if (value == NAN)
-        {
-            printf("value %d was NAN\n", i);
-        }
-
-        _context->SamplesElapsed++;
-    }
-
-    printf("Ending main\n");
-}
-
 int main()
 {
     stdio_init_all();

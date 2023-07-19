@@ -30,6 +30,7 @@
         "ostream": "c",
         "bitset": "c",
         "chrono": "c",
-        "pitchtable.h": "c"
+        "pitchtable.h": "c",
+        "test.h": "c"
     }
 }
