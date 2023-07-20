@@ -35,16 +35,18 @@ void test_sweep(AudioContext_t *context, Waveform_t waveform)
     }
 }
 
-float frequency_from_reference_pitch(float f, int pitch){
+float frequency_from_reference_pitch(float f, int pitch)
+{
     return f * powf(2.f, (float)pitch / 12.f);
 }
 
-void test_pattern(AudioContext_t *context){
-    int pattern[6] = { 0, 1, 3, 5, 3, 1 };
+void test_pattern(AudioContext_t *context)
+{
+    int pattern[6] = {0, 1, 3, 5, 3, 1};
 
     context->Voice.waveform = TRIANGLE;
 
-    for(int i =0; i< 6; i++)
+    for (int i = 0; i < 6; i++)
     {
         context->Voice.frequency = frequency_from_reference_pitch(PITCH_C3, pattern[i]);
         sleep_ms(220);

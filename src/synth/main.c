@@ -20,17 +20,17 @@ bool _swap = false;
 int _pwmDmaChannel;
 AudioContext_t *_context;
 
-void synth_fill_write_buffer(AudioContext_t *context)
+void synth_fill_write_buffer()
 {
     for (int i = 0; i < BUFFER_LENGTH; i++)
     {
-        float sample = synth_waveform_sample(context);
+        float sample = synth_waveform_sample(_context);
 
         // scale to 8 bit in a 16-bit container
         unsigned short value = (sample + 1.f) * 127.f;
 
-        context->AudioOut[i] = value * context->Volume;
-        context->SamplesElapsed++;
+        _context->AudioOut[i] = value * _context->Volume;
+        _context->SamplesElapsed++;
     }
 }
 
@@ -47,14 +47,14 @@ static void __isr __time_critical_func(synth_dma_irq_handler)()
     // fill write buffer
     _context->AudioOut = _swap ? _buffer1 : _buffer0;
 
-    synth_fill_write_buffer(_context);
+    synth_fill_write_buffer();
 }
 
 void synth_init_audio_context(float clk_div){
     // derive sample rate
     uint systemClockHz = frequency_count_khz(CLOCKS_FC0_SRC_VALUE_CLK_SYS) * 1000;
     _context = malloc(sizeof(AudioContext_t));
-    _context->SampleRate = (float)systemClockHz / clk_div * 255.f;
+    _context->SampleRate = systemClockHz / (float)(clk_div * 255);
     _context->SamplesElapsed = 0;
     _context->Volume = 0.3;
     _context->Voice.frequency = 440;
