@@ -2,31 +2,31 @@
 #define SYNTH_AUDIOCONTEXT_
 
 #include <stdlib.h>
+
 #include "pico/stdlib.h"
 
 #define BUFFER_LENGTH 512
 
-typedef enum Waveform {
-    SINE = 0,
-    SQUARE,
-    SAW,
-    TRIANGLE,
-    NOISE
-} Waveform_t;
+typedef enum Waveform { SINE = 0, SQUARE, SAW, TRIANGLE, NOISE } Waveform_t;
 
-typedef struct Voice
-{
+typedef struct Voice {
     float frequency;
     Waveform_t waveform;
+    float attack;
+    float decay;
+    float sustain;
+    float release;
+    bool triggerAttack;
+    float envelope;
+    unsigned short out;
 } Voice_t;
 
-typedef struct AudioContext
-{
-    unsigned short *AudioOut;
-    uint64_t SamplesElapsed;
+typedef struct AudioContext {
+    unsigned short* AudioOut;
+    size_t SamplesElapsed;
     float SampleRate;
     Voice_t Voice;
     float Volume;
 } AudioContext_t;
 
-#endif 
+#endif
