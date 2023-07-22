@@ -702,10 +702,49 @@ wow.  i use float instead of double and now can run at ~82kHz
 
 ### Envelope
 
-remove amplitude from Voice_t and let envelope control it
+DONE - remove amplitude from Voice_t and let envelope control it
 
-NoteOn - trigger attack-decay-sustain (onset)
-NoteOff - trigger release
+DONE - NoteOn - trigger attack-decay-sustain (onset)
+
+DONE - NoteOff - trigger release
+
+well.  I went down a road of trying to use function pointers, but it's hard.  no idea how to get closures.
+
+i had something like:
+
+```c
+
+// function pointer as a member of Voice_t
+float (*enveloperGenerator)(float, float, float, float);
+
+// function i was trying to use
+// the idea was as each section of the ADSR elapsed I would point to the next function to generate the next seciton...
+
+// roughly translated from c# version
+float attack(float timeInitial, float time, float duration, float attack){
+    if(!has_elapsed(timeInitial, time, duration))   
+        ? linear_easing(timeInitial, time, duration, 0.f, 1.f)
+        : 1.f; 
+}
+
+envelopeGenerator = &attack;
+
+// etc
+```
+
+but yeah, nah.  too hard for me.
+
+Too many float's there too.  So, after watching another Bela video and thinking about the SID chip.
+
+SID has a control register a single bit to indicate voiceOn or voiceOff
+
+Bit #0: 0 = Voice off, Release cycle; 1 = Voice on, Attack-Decay-Sustain cycle.
+
+so I added a flag to the voice `bool triggerAttack`
+
+and made a state machine as suggested by Bela.  
+
+and all good.  the actual state that is held in `envelope.c` will need to migrate to the voice I assume at some stage.
 
 
 
