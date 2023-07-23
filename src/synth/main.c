@@ -111,6 +111,8 @@ void synth_dma_init(uint slice) {
 int main() {
     stdio_init_all();
 
+    printf("Synth starting.\n");
+
     float clk_div = 11.f;
 
     synth_audio_context_init(clk_div);

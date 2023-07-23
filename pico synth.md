@@ -715,13 +715,13 @@ i had something like:
 ```c
 
 // function pointer as a member of Voice_t
-float (*enveloperGenerator)(float, float, float, float);
+float (*envelopeGenerator)(float, float, float);
 
 // function i was trying to use
-// the idea was as each section of the ADSR elapsed I would point to the next function to generate the next seciton...
+// the idea was as each section of the ADSR elapsed I would point to the next function to generate the next section...
 
 // roughly translated from c# version
-float attack(float timeInitial, float time, float duration, float attack){
+float attack(float timeInitial, float time, float duration){
     if(!has_elapsed(timeInitial, time, duration))   
         ? linear_easing(timeInitial, time, duration, 0.f, 1.f)
         : 1.f; 
@@ -747,11 +747,94 @@ and made a state machine as suggested by Bela.
 and all good.  the actual state that is held in `envelope.c` will need to migrate to the voice I assume at some stage.
 
 
+## UART and SWD with picoprobe
+
+well good, I got a couple more pico in the mail so I have made one up as UART/SWD.  This frees up the USB port for midi I hope and helps debugging and deploying.
+
+UART works.  updated the cmake file to switch from USB and all good.
+
+build and install openocd as per datasheet instructions
+
+SWD deploys the elf file not the uf2
+
+`openocd -f interface/raspberrypi-swd.cfg -f target/rp2040.cfg -c "program synth.elf verify reset exit"`
+
+datasheet instructions ar enot quite correct but the original gist at the top of this document is good.
+
+I now get 
+
+```
+Open On-Chip Debugger 0.11.0-g8e3c38f (2023-07-23-19:55)
+Licensed under GNU GPL v2
+For bug reports, read
+        http://openocd.org/doc/doxygen/bugs.html
+Error: The specified debug interface was not found (bcm2835gpio)
+The following debug adapters are available:
+1: ftdi
+2: usb_blaster
+3: ft232r
+4: presto
+5: usbprog
+6: openjtag
+7: jlink
+8: vsllink
+9: rlink
+10: ulink
+11: arm-jtag-ew
+12: hla
+13: osbdm
+14: opendous
+15: sysfsgpio
+16: aice
+17: picoprobe
+18: cmsis-dap
+19: xds110
+20: st-link
+```
+
+picoprobe is available, so the openocd command 'aint right.
+
+```sh
+sudo openocd -f interface/picoprobe.cfg -f target/rp2040.cfg -c "program synth.elf verify reset exit"
+
+Open On-Chip Debugger 0.11.0-g8e3c38f (2023-07-23-19:55)
+Licensed under GNU GPL v2
+For bug reports, read
+        http://openocd.org/doc/doxygen/bugs.html
+Info : only one transport option; autoselect 'swd'
+adapter speed: 5000 kHz
+
+Info : Hardware thread awareness created
+Info : Hardware thread awareness created
+Info : RP2040 Flash Bank Command
+Error: Failed to open or find the device
+Error: Can't find a picoprobe device! Please check device connections and permissions.
+Error: No Valid JTAG Interface Configured.
+```
+
+The internet says try this:
+
+`openocd -f interface/cmsis-dap.cfg -c "adapter speed 5000" -f target/rp2040.cfg -s tcl`
+
+Works with sudo.
+
+That command opens gdb for debugging.
+
+let's try (second attempt actually...)
+
+```sh
+
+sudo openocd -f interface/cmsis-dap.cfg -f target/rp2040.cfg -c "adapter speed 5000" -c " program synth.elf verify reset exit"
+
+```
+and gold.
+
+gonna add some sh scripts to monitor uart and deploy (and make) the elf.
+
+
+
 
 ## core1 midi (or adc knob twiddling)
-
-
-tbd
 
 there is _TUSB_MIDI_DEVICE_H_  tinyusb midi device
 

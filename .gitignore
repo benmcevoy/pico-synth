@@ -1,4 +1,5 @@
-﻿pico-examples/
+﻿openocd/
+pico-examples/
 pico-playground/
 pico-extras/
 picoprobe/
@@ -10,3 +11,6 @@ nohup.out
 .envrc
 
 !src/build/synth.uf2
+!src/build/synth.elf
+!src/build/monitor.sh
+!src/build/deploy.sh
