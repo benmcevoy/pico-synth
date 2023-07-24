@@ -30,6 +30,7 @@
         "bitset": "c",
         "chrono": "c",
         "pitchtable.h": "c",
-        "test.h": "c"
+        "test.h": "c",
+        "envelope.h": "c"
     }
 }

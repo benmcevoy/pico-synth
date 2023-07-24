@@ -7,10 +7,13 @@
 #include "hardware/pwm.h"
 #include "include/audiocontext.h"
 #include "include/envelope.h"
+#include "include/ledblink.h"
+#include "include/midi.h"
 #include "include/pitchtable.h"
 #include "include/waveform.h"
 #include "pico/stdlib.h"
 #include "test.h"
+#include "tusb.h"
 
 #define PIN 26
 
@@ -55,14 +58,17 @@ static void __isr __time_critical_func(dma_irq_handler)() {
 
 void synth_audio_context_init(float clk_div) {
     // derive sample rate
-    uint systemClockHz =
-        frequency_count_khz(CLOCKS_FC0_SRC_VALUE_CLK_SYS) * 1000;
+    uint systemClockHz = frequency_count_khz(CLOCKS_FC0_SRC_VALUE_CLK_SYS) * 1000;
     _context = malloc(sizeof(AudioContext_t));
     _context->SampleRate = systemClockHz / (float)(clk_div * 255);
     _context->SamplesElapsed = 0;
     _context->Volume = 0.3;
     _context->Voice.frequency = 440;
     _context->Voice.waveform = SAW;
+    _context->Voice.attack = 0.05;
+    _context->Voice.decay = 0.05;
+    _context->Voice.sustain = 0.8;
+    _context->Voice.release = 0.2;
 }
 
 uint synth_pwm_init(float clk_div) {
@@ -122,5 +128,33 @@ int main() {
 
     synth_dma_init(slice);
 
-    while (true) synth_play_test(_context);
+    board_init();
+
+    // init device stack on configured roothub port
+    tud_init(BOARD_TUD_RHPORT);
+
+    while (true) {
+        // synth_play_test(_context);
+
+        tud_task();  // tinyusb device task
+        synth_led_blink_task();
+        synth_midi_task(_context);
+    }
 }
+
+// Invoked when device is mounted
+void tud_mount_cb(void) { synth_led_blink_interval_ms = BLINK_MOUNTED; }
+
+// Invoked when device is unmounted
+void tud_umount_cb(void) { synth_led_blink_interval_ms = BLINK_NOT_MOUNTED; }
+
+// Invoked when usb bus is suspended
+// remote_wakeup_en : if host allow us  to perform remote wakeup
+// Within 7ms, device must draw an average of current less than 2.5 mA from bus
+void tud_suspend_cb(bool remote_wakeup_en) {
+    (void)remote_wakeup_en;
+    synth_led_blink_interval_ms = BLINK_SUSPENDED;
+}
+
+// Invoked when usb bus is resumed
+void tud_resume_cb(void) { synth_led_blink_interval_ms = BLINK_MOUNTED; }

@@ -1,6 +1,11 @@
 #ifndef SYNTH_PITCHTABLE_
 #define SYNTH_PITCHTABLE_
 
+#include <stdlib.h>
+#include "pico/stdlib.h"
+
+float frequency_from_reference_pitch(float f, uint8_t pitch);
+
 #define PITCH_C0 32.703
 #define PITCH_Db0 34.648
 #define PITCH_D0 36.708

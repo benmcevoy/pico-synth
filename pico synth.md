@@ -40,8 +40,13 @@ set the project to synth
 in the synth project just include main.c to build, plus a bit of pico config
 
 e.g.
-
-```
+ben@linux-tower:/media/ben/DATA/Dev/git/Synth/pico/pico-sdk/lib/tinyusb/examples/device/midi_test/_build/raspberry_pi_pico$ sudo plink -serial /dev/ttyACM0 -sercfg 115200
+midi received 9 144 57 100
+midi received 9 144 60 96
+midi received 8 128 60 0
+midi received 9 144 62 68
+midi received 8 128 62 0
+midi received 9 144 65 72
 pico_enable_stdio_usb(synth 1)
 pico_enable_stdio_uart(synth 0)
 ```
@@ -832,16 +837,98 @@ and gold.
 gonna add some sh scripts to monitor uart and deploy (and make) the elf.
 
 
-
-
 ## core1 midi (or adc knob twiddling)
 
-there is _TUSB_MIDI_DEVICE_H_  tinyusb midi device
 
-add midi note number table
-add midi command noteon, noteoff
+### first steps
 
-midi events should be in a FIFO queue that is supplied with the current write buffer
-so we can catch up on what and when
-but tinyusb should be doing this i assume.
+first lets get the example project working
+
+maybe i can try to just echo midi commands back on UART?
+
+lets build the midi_test example
+
+https://github.com/hathach/tinyusb/blob/master/docs/reference/getting_started.rst
+
+groovy
+
+shows up as a midi device, used qjackctl to connect and I hear the example pattern.
+
+the example also implements receiving midi and disacrds it
+
+so loopback over UART:
+
+```sh
+$ sudo plink -serial /dev/ttyACM0 -sercfg 115200
+
+midi received 9 144 57 100
+midi received 9 144 60 96
+midi received 8 128 60 0
+midi received 9 144 62 68
+midi received 8 128 62 0
+midi received 9 144 65 72
+
+```
+woot.
+
+8 - note off
+128 - velocity
+60 - note number C3
+x - ignored
+
+9 - note on
+144 - velocity - kinda nonsense can ignore
+60 - note number
+x - ignore
+
+this data looks wrong
+
+0x9n  where n is the channel.
+
+not getting that?
+
+ok.
+
+9 144 57 100
+
+- 9 this is noteon (9), 
+- 144 is %1001 0000  which is 0x90  or note on channel 0
+- 57 note number
+- 100 velocity
+
+command, command_channel, note, velocity
+
+alrighty.  makes sense now.  can't find any documentation.  
+
+note really standard.  i guess the first byte is trying to be helpful.
+
+ok.  i think I can now try to integrate this into my code.
+
+and again, just getting it to echo for now.
+
+
+
+Excellent.  
+
+
+
+DONE - there is _TUSB_MIDI_DEVICE_H_  tinyusb midi device
+
+DONE - add midi note number table, note needed used the note to pitch funciton instead.
+
+DONE - add midi command noteon, noteoff
+
+DONE - midi events should be in a FIFO queue that is supplied with the current write buffer so we can catch up on what and when but tinyusb should be doing this i assume.
+
+
+well darn.
+
+for some reason it is not actually playing on NOTEON
+
+oh ho ho
+
+had not set any envelope values. lol.
+
+working good!
+
 
