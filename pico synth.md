@@ -931,4 +931,13 @@ had not set any envelope values. lol.
 
 working good!
 
+## polyphony
+
+
+## Filters
+
+
+## Echo echo echo
+
+
 

@@ -64,7 +64,7 @@ void synth_audio_context_init(float clk_div) {
     _context->SamplesElapsed = 0;
     _context->Volume = 0.3;
     _context->Voice.frequency = 440;
-    _context->Voice.waveform = SAW;
+    _context->Voice.waveform = TRIANGLE;
     _context->Voice.attack = 0.05;
     _context->Voice.decay = 0.05;
     _context->Voice.sustain = 0.8;
