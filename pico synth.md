@@ -41,13 +41,6 @@ in the synth project just include main.c to build, plus a bit of pico config
 
 e.g.
 ```sh
-$ sudo plink -serial /dev/ttyACM0 -sercfg 115200
-midi received 9 144 57 100
-midi received 9 144 60 96
-midi received 8 128 60 0
-midi received 9 144 62 68
-midi received 8 128 62 0
-midi received 9 144 65 72
 pico_enable_stdio_usb(synth 1)
 pico_enable_stdio_uart(synth 0)
 ```
@@ -86,7 +79,9 @@ pico_enable_stdio_uart(${projectName} 1)
 
 for now, don't care.  it's more convient to use usb.
 
-`sudo plink -serial /dev/ttyACM0 -sercfg 115200`
+```sh
+sudo plink -serial /dev/ttyACM0 -sercfg 115200
+```
 
 ## wavetable on an irq
 
