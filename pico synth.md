@@ -40,7 +40,8 @@ set the project to synth
 in the synth project just include main.c to build, plus a bit of pico config
 
 e.g.
-ben@linux-tower:/media/ben/DATA/Dev/git/Synth/pico/pico-sdk/lib/tinyusb/examples/device/midi_test/_build/raspberry_pi_pico$ sudo plink -serial /dev/ttyACM0 -sercfg 115200
+```sh
+$ sudo plink -serial /dev/ttyACM0 -sercfg 115200
 midi received 9 144 57 100
 midi received 9 144 60 96
 midi received 8 128 60 0
