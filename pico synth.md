@@ -968,12 +968,11 @@ add detune as a multiplier.  so e.g. `frequency * 1.01` to tune a little higher
 
 ## MIDI CC
 
-MIDI CC 70-79
-MIDI CC70	Sound Controller 1	A control for affecting how the sound is produced. Used for filters, effects etc.
-MIDI CC 71	Sound Controller 2	Allocated to filter resonance/Q.
-MIDI CC 72	Sound Controller 3	Allocated to the amp envelope release time. Changes how long notes fade out.
-MIDI CC 73	Sound Controller 4	Allocated to the amp envelope attack time. Changes how fast the volume rises from the keypress to max volume.
-MIDI CC 74	Sound Controller 5	Allocated to the filter cutoff frequency Hz value.
-MIDI CC 75 – 79	Sound Controller 6-10	An extra control for affecting how the sound is produced. Used for filters, effects etc. 
-
-MIDI CC 94	Effect 4 Depth	Usually a control for the amount of detuning.
+- MIDI CC 70-79
+- MIDI CC70	Sound Controller 1	A control for affecting how the sound is produced. Used for filters, effects etc.
+- MIDI CC 71	Sound Controller 2	Allocated to filter resonance/Q.
+- MIDI CC 72	Sound Controller 3	Allocated to the amp envelope release time. Changes how long notes fade out.
+- MIDI CC 73	Sound Controller 4	Allocated to the amp envelope attack time. Changes how fast the volume rises from the keypress to max volume.
+- MIDI CC 74	Sound Controller 5	Allocated to the filter cutoff frequency Hz value.
+- MIDI CC 75 – 79	Sound Controller 6-10	An extra control for affecting how the sound is produced. Used for filters, effects etc. 
+- MIDI CC 94	Effect 4 Depth	Usually a control for the amount of detuning.
