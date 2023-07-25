@@ -933,11 +933,47 @@ working good!
 
 ## polyphony
 
+hmm, want to think about for this a while.
+
+a monophonic synth can have several voices or OSCILLATORS but they combine to make the actual voice sound
+
+i think in the first place some monophonic behaviour is the plan
+
+### Note priority
+
+https://en.wikipedia.org/wiki/Polyphony_and_monophony_in_instruments#Note_priority_of_synthesizer
+
+I have allowed three voices now, but I am hitting performance constraints again, had to halve the sample rate for now.
+
+Currently running at ~18.8kHz
+
+I would like to convert the floats to fixed point, as the pico (Cortex M0+) has no FPU...
+
+uh-huh.  not sure how to use `<stdfix.h>`  - keeps saying _Accum is undefined.
+
+I have implemented a very dodgy note priority.  a dodgy stack.
+
+i'll have to try again.  it'll do for now.
+
+add detune as a multiplier.  so e.g. `frequency * 1.01` to tune a little higher
+
 
 ## Filters
+
+
 
 
 ## Echo echo echo
 
 
+## MIDI CC
 
+MIDI CC 70-79
+MIDI CC70	Sound Controller 1	A control for affecting how the sound is produced. Used for filters, effects etc.
+MIDI CC 71	Sound Controller 2	Allocated to filter resonance/Q.
+MIDI CC 72	Sound Controller 3	Allocated to the amp envelope release time. Changes how long notes fade out.
+MIDI CC 73	Sound Controller 4	Allocated to the amp envelope attack time. Changes how fast the volume rises from the keypress to max volume.
+MIDI CC 74	Sound Controller 5	Allocated to the filter cutoff frequency Hz value.
+MIDI CC 75 – 79	Sound Controller 6-10	An extra control for affecting how the sound is produced. Used for filters, effects etc. 
+
+MIDI CC 94	Effect 4 Depth	Usually a control for the amount of detuning.

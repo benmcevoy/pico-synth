@@ -31,6 +31,8 @@
         "chrono": "c",
         "pitchtable.h": "c",
         "test.h": "c",
-        "envelope.h": "c"
+        "envelope.h": "c",
+        "stdfix.h": "c",
+        "midi.h": "c"
     }
 }

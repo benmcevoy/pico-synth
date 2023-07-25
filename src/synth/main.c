@@ -14,28 +14,39 @@
 #include "pico/stdlib.h"
 #include "test.h"
 #include "tusb.h"
+#include "tusb_config.h"
 
 #define PIN 26
 
-unsigned short _buffer0[BUFFER_LENGTH] = {0};
-unsigned short _buffer1[BUFFER_LENGTH] = {0};
-bool _swap = false;
-int _pwmDmaChannel;
-AudioContext_t *_context;
+static unsigned short _buffer0[BUFFER_LENGTH] = {0};
+static unsigned short _buffer1[BUFFER_LENGTH] = {0};
+static bool _swap = false;
+static int _pwmDmaChannel;
+static AudioContext_t* _context;
 
-void fill_write_buffer() {
+static void fill_write_buffer() {
     for (int i = 0; i < BUFFER_LENGTH; i++) {
-        float sample = synth_waveform_sample(_context);
+        float mix = 0.f;
+
+        for (int v = 0; v < VOICES_LENGTH; v++) {
+            Voice_t* voice = &_context->Voices[v];
+
+            float sample = synth_waveform_sample(voice);
+
+            // envelope modulation
+            float envelope = synth_envelope_process(voice);
+            
+            // mix
+            mix += sample * envelope;
+        }
+
+        mix /= (float)VOICES_LENGTH;
 
         // scale to 8 bit in a 16-bit container
-        _context->Voice.out = (sample + 1.f) * 127.f;
-
-        // envelope modulation
-        _context->Voice.envelope = synth_envelope_process(&_context->Voice);
+        unsigned short out = (mix + 1.f) * 127.f;
 
         // final volume
-        _context->AudioOut[i] =
-            _context->Voice.out * _context->Voice.envelope * _context->Volume;
+        _context->AudioOut[i] = out * _context->Volume;
         _context->SamplesElapsed++;
     }
 }
@@ -56,22 +67,45 @@ static void __isr __time_critical_func(dma_irq_handler)() {
     fill_write_buffer();
 }
 
-void synth_audio_context_init(float clk_div) {
+static void synth_audio_context_init(float clk_div) {
     // derive sample rate
-    uint systemClockHz = frequency_count_khz(CLOCKS_FC0_SRC_VALUE_CLK_SYS) * 1000;
+    uint systemClockHz =
+        frequency_count_khz(CLOCKS_FC0_SRC_VALUE_CLK_SYS) * 1000;
+
     _context = malloc(sizeof(AudioContext_t));
     _context->SampleRate = systemClockHz / (float)(clk_div * 255);
     _context->SamplesElapsed = 0;
     _context->Volume = 0.3;
-    _context->Voice.frequency = 440;
-    _context->Voice.waveform = TRIANGLE;
-    _context->Voice.attack = 0.05;
-    _context->Voice.decay = 0.05;
-    _context->Voice.sustain = 0.8;
-    _context->Voice.release = 0.2;
+
+    _context->Voices[0].envelopeState = OFF;
+    _context->Voices[0].frequency = 440;
+    _context->Voices[0].waveform = SAW;
+    _context->Voices[0].attack = 0.05;
+    _context->Voices[0].decay = 0.05;
+    _context->Voices[0].sustain = 1.f;
+    _context->Voices[0].release = 0.5f;
+    _context->Voices[0].detune = 1.f;
+
+    _context->Voices[1].envelopeState = OFF;
+    _context->Voices[1].frequency = 440;
+    _context->Voices[1].waveform = SAW;
+    _context->Voices[1].attack = 0.05;
+    _context->Voices[1].decay = 0.05;
+    _context->Voices[1].sustain = 1.f;
+    _context->Voices[1].release = 1.f;
+    _context->Voices[1].detune = 2.01f;
+
+    _context->Voices[2].envelopeState = OFF;
+    _context->Voices[2].frequency = 440;
+    _context->Voices[2].waveform = SAW;
+    _context->Voices[2].attack = 0.05;
+    _context->Voices[2].decay = 0.05;
+    _context->Voices[2].sustain = 1.f;
+    _context->Voices[2].release = 0.5f;
+    _context->Voices[2].detune = 1.01f;
 }
 
-uint synth_pwm_init(float clk_div) {
+static uint synth_pwm_init(float clk_div) {
     // setup pwm
     gpio_set_function(PIN, GPIO_FUNC_PWM);
     gpio_set_function(PIN + 1, GPIO_FUNC_PWM);
@@ -89,7 +123,7 @@ uint synth_pwm_init(float clk_div) {
     return slice;
 }
 
-void synth_dma_init(uint slice) {
+static void synth_dma_init(uint slice) {
     // setup dma
     _pwmDmaChannel = dma_claim_unused_channel(true);
 
@@ -118,23 +152,23 @@ int main() {
     stdio_init_all();
 
     printf("Synth starting.\n");
+    sleep_ms(100);
 
-    float clk_div = 11.f;
+    float clk_div = 26.f;
 
     synth_audio_context_init(clk_div);
     synth_envelope_init(_context->SampleRate);
+    synth_waveform_init(_context->SampleRate);
 
     uint slice = synth_pwm_init(clk_div);
-
     synth_dma_init(slice);
-
     board_init();
 
     // init device stack on configured roothub port
     tud_init(BOARD_TUD_RHPORT);
 
     while (true) {
-        // synth_play_test(_context);
+        // synth_play_test(&_context->Voices[0]);
 
         tud_task();  // tinyusb device task
         synth_led_blink_task();

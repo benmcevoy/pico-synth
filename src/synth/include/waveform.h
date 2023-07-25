@@ -4,27 +4,26 @@
 #define SYNTH_WAVEFORM_
 
 #ifndef M_PI
-#define M_PI 3.14159265358979323846
+#define M_PI 3.14159265358979323846f
 #endif
 
 #ifndef M_PI_2
-#define M_PI_2		1.57079632679489661923	/* pi/2 */
+#define M_PI_2		1.57079632679489661923f	/* pi/2 */
 #endif
 
 #ifndef TWO_PI
-#define TWO_PI		6.28318530717958647692	/* pi*2 */
+#define TWO_PI		6.28318530717958647692f	/* pi*2 */
 #endif
 
 #define WAVE_TABLE_LENGTH 512
 
+void synth_waveform_init(float sampleRate);
+
 /*! \brief Generate an audio sample
  *
  * \param context The audio context
- * \param waveform The waveform to use
- * \param frequency Frequency in hertz
- * \param amplitude between 0.0 and 1.0, where 1.0 is maximum volume
  */
-float synth_waveform_sample(AudioContext_t* context);
+float synth_waveform_sample(Voice_t* context);
 
 static float TriangleWaveTable[WAVE_TABLE_LENGTH] = {
     0.000000,  0.007812,  0.015625,  0.023438,  0.031250,  0.039062,  0.046875,

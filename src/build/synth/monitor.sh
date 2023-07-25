@@ -1,2 +1,2 @@
-sudo plink -serial /dev/ttyACM0 -sercfg 115200
+sudo plink -serial /dev/ttyACM1 -sercfg 115200
 

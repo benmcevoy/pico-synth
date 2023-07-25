@@ -11,7 +11,7 @@ enum {
     BLINK_SUSPENDED = 2500,
 };
 
-static uint32_t synth_led_blink_interval_ms = BLINK_NOT_MOUNTED;
+uint32_t synth_led_blink_interval_ms = BLINK_NOT_MOUNTED;
 
 void synth_led_blink_task(void) {
     static uint32_t start_ms = 0;

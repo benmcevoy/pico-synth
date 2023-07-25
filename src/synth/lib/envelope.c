@@ -1,26 +1,16 @@
 #include "../include/envelope.h"
 
-#define OFF 0
-#define ATTACK 1
-#define DECAY 2
-#define SUSTAIN 3
-#define RELEASE 4
+static float _sampleRate = 0.f;
 
-// TODO: this state will be a problem if/when there are multiple voices
-float _sampleRate = 0.f;
-float _counter = 0.f;
-float _duration = 0.f;
-char _state = OFF;
-
-float elapsed(float time, float duration) {
+static  float elapsed(float time, float duration) {
     return (duration - time) / duration;
 }
 
-bool has_elapsed(float time, float duration) {
+static bool has_elapsed(float time, float duration) {
     return elapsed(time, duration) >= 1.f;
 }
 
-float linear_easing(float time, float duration, float start, float end) {
+static  float linear_easing(float time, float duration, float start, float end) {
     return has_elapsed(time, duration)
                ? end
                : start + elapsed(time, duration) * (end - start);
@@ -31,51 +21,51 @@ void synth_envelope_note_on(Voice_t* voice) { voice->triggerAttack = true; }
 void synth_envelope_note_off(Voice_t* voice) { voice->triggerAttack = false; }
 
 float synth_envelope_process(Voice_t* voice) {
-    if (voice->triggerAttack && (_state == OFF || _state == RELEASE)) {
-        _duration = voice->attack * _sampleRate;
-        _counter = _duration;
-        _state = ATTACK;
+    if (voice->triggerAttack && (voice->envelopeState == OFF || voice->envelopeState == RELEASE)) {
+        voice->envelopeDuration = voice->attack * _sampleRate;
+        voice->envelopeCounter = voice->envelopeDuration;
+        voice->envelopeState = ATTACK;
     }
 
     if (!voice->triggerAttack &&
-        (_state == ATTACK || _state == DECAY || _state == SUSTAIN)) {
-        _duration = voice->release * _sampleRate;
-        _counter = _duration;
-        _state = RELEASE;
+        (voice->envelopeState == ATTACK || voice->envelopeState == DECAY || voice->envelopeState == SUSTAIN)) {
+        voice->envelopeDuration = voice->release * _sampleRate;
+        voice->envelopeCounter = voice->envelopeDuration;
+        voice->envelopeState = RELEASE;
     }
 
-    switch (_state) {
+    switch (voice->envelopeState) {
         case OFF:
             return 0.f;
 
         case ATTACK:
-            if (_counter == 0) {
-                _duration = voice->decay * _sampleRate;
-                _counter = _duration;
-                _state = DECAY;
+            if (voice->envelopeCounter == 0) {
+                voice->envelopeDuration = voice->decay * _sampleRate;
+                voice->envelopeCounter = voice->envelopeDuration;
+                voice->envelopeState = DECAY;
                 return 1.f;
             }
 
-            return linear_easing(_counter--, _duration, 0.f, 1.f);
+            return linear_easing(voice->envelopeCounter--, voice->envelopeDuration, 0.f, 1.f);
 
         case DECAY:
-            if (_counter == 0) {
-                _state = SUSTAIN;
+            if (voice->envelopeCounter == 0) {
+                voice->envelopeState = SUSTAIN;
                 return voice->sustain;
             }
 
-            return linear_easing(_counter--, _duration, 1.f, voice->sustain);
+            return linear_easing(voice->envelopeCounter--, voice->envelopeDuration, 1.f, voice->sustain);
 
         case SUSTAIN:
             return voice->sustain;
 
         case RELEASE:
-            if (_counter == 0) {
-                _state = OFF;
+            if (voice->envelopeCounter == 0) {
+                voice->envelopeState = OFF;
                 return 0.f;
             }
 
-            return linear_easing(_counter--, _duration, voice->sustain, 0.f);
+            return linear_easing(voice->envelopeCounter--, voice->envelopeDuration, voice->sustain, 0.f);
 
         default:
             return 0.f;
