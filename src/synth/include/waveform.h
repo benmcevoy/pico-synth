@@ -1,8 +1,9 @@
-#include "../include/audiocontext.h"
-
 #ifndef SYNTH_WAVEFORM_
 #define SYNTH_WAVEFORM_
 
+#include "../include/audiocontext.h"
+
+// TODO: DRY wrt filter.h & why can't I use math.h for this?
 #ifndef M_PI
 #define M_PI 3.14159265358979323846f
 #endif

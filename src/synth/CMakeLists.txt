@@ -8,7 +8,8 @@ add_executable(${projectName} main.c
     lib/waveform.c 
     lib/envelope.c
     lib/midi.c
-    lib/pitchtable.c)
+    lib/pitchtable.c
+    lib/filter.c)
 
 # disable usb output, enable uart output
 pico_enable_stdio_usb(${projectName} 0)

@@ -1,9 +1,7 @@
 #include "../include/waveform.h"
-
 #include <math.h>
 
 static float _sampleRate = 0.f;
-
 
 static float read_from_wt(Voice_t* voice, float* waveTable) {
     uint indexBelow = floorf(voice->envelopeReadPointer);

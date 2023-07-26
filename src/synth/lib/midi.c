@@ -6,6 +6,8 @@
 #include "include/envelope.h"
 #include "tusb.h"
 
+static float _sampleRate;
+static float _maxFilterCutoff;
 static float _notePriority[12] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 static uint8_t _notePriorityIndex = 0;
 
@@ -49,11 +51,27 @@ static void note_off(AudioContext_t* context) {
     }
 }
 
+void control_change(AudioContext_t* context, uint8_t command,
+                    uint8_t parameter) {
+    switch (command) {
+        case SYNTH_MIDI_CC_CUTOFF:
+            context->filterCutoff = _maxFilterCutoff * (float)parameter / 128.f;
+            break;
+        case SYNTH_MIDI_CC_RESONANCE:
+            context->filterResonance = (float)parameter / 128.f;
+            break;
+        default:
+            break;
+    }
+}
+
 static void process_midi_command(AudioContext_t* context, uint8_t packet[4]) {
     uint8_t command = packet[1] & 0b11110000;
     uint8_t channel = packet[1] & 0b00001111;
 
     //    if (channel >= VOICES_LENGTH) return;
+
+    printf("midi: %d %d %d\n", command, packet[2], packet[3]);
 
     switch (command) {
         case SYNTH_MIDI_NOTEON:
@@ -61,7 +79,8 @@ static void process_midi_command(AudioContext_t* context, uint8_t packet[4]) {
             break;
         case SYNTH_MIDI_NOTEOFF:
             note_off(context);
-        default:
+        case SYNTH_MIDI_CC:
+            control_change(context, packet[2], packet[3]);
             break;
     }
 }
@@ -73,4 +92,9 @@ void synth_midi_task(AudioContext_t* context) {
         tud_midi_packet_read(packet);
         process_midi_command(context, packet);
     }
+}
+
+void synth_midi_init(float sampleRate) {
+    _sampleRate = sampleRate;
+    _maxFilterCutoff = _sampleRate / 2.f;
 }

@@ -39,6 +39,9 @@ typedef struct AudioContext {
     float SampleRate;
     Voice_t Voices[VOICES_LENGTH];
     float Volume;
+    bool filterEnabled;
+    float filterCutoff;
+    float filterResonance;
 } AudioContext_t;
 
 #endif

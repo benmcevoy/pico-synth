@@ -868,12 +868,12 @@ midi received 9 144 65 72
 woot.
 
 8 - note off
-128 - velocity
+128 - velocity - kinda nonsense can ignore
 60 - note number C3
 x - ignored
 
 9 - note on
-144 - velocity - kinda nonsense can ignore
+144 - velocity 
 60 - note number
 x - ignore
 
@@ -956,13 +956,35 @@ add detune as a multiplier.  so e.g. `frequency * 1.01` to tune a little higher
 
 ## Filters
 
+ARM provides CMSIS SCIENCE library!  DSP and what not.
 
+What kinda filter did I have in C#?
 
+```c#
+        // Calculate the filter coefficients based on the given parameters
+        // Borrows code from the Bela Biquad library, itself based on code by
+        // Nigel Redmon
+```
+Seems I nicked it.
 
-## Echo echo echo
+Appears to be a "second-order IIR filter".  CMSIS offers at least three variations of an IIR filter.
 
+I'll start by porting my code and being happy if it works.
+
+for now filter is at the audio context level, so applies to the final output and not per voice.
+
+ok.  that seems to work :)
+
+I am going to swap the order of things now and implement the CC commands so I can start knob twiddling.
+
+performance is tanking :) down to ~13kHz now.
 
 ## MIDI CC
+
+looks like the tinyusb library does not support usb midi host, so I don't think I can plug a midi controller in directly (yet). 
+I found a project that has patched in support for this.
+
+Or alternatively look at using a DIN plug and midi over UART.  Sounds like work.
 
 - MIDI CC 70-79
 - MIDI CC70	Sound Controller 1	A control for affecting how the sound is produced. Used for filters, effects etc.
@@ -972,3 +994,17 @@ add detune as a multiplier.  so e.g. `frequency * 1.01` to tune a little higher
 - MIDI CC 74	Sound Controller 5	Allocated to the filter cutoff frequency Hz value.
 - MIDI CC 75 – 79	Sound Controller 6-10	An extra control for affecting how the sound is produced. Used for filters, effects etc. 
 - MIDI CC 94	Effect 4 Depth	Usually a control for the amount of detuning.
+
+## Echo echo echo
+
+
+## Performance
+
+profiling - measure first. might be some low hanging fruit here.
+
+the envelope generation is almost all linear interpolation.  Pico has a hardware interpolator.  Just no idea how to use it...
+
+fixed point math.
+
+I read somewhere the interpolator can also be used for reading the wave table. Maybe.
+

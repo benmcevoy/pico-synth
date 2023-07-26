@@ -7,6 +7,7 @@
 #include "hardware/pwm.h"
 #include "include/audiocontext.h"
 #include "include/envelope.h"
+#include "include/filter.h"
 #include "include/ledblink.h"
 #include "include/midi.h"
 #include "include/pitchtable.h"
@@ -17,6 +18,8 @@
 #include "tusb_config.h"
 
 #define PIN 26
+
+static float clk_div = 40.f;
 
 static unsigned short _buffer0[BUFFER_LENGTH] = {0};
 static unsigned short _buffer1[BUFFER_LENGTH] = {0};
@@ -35,12 +38,18 @@ static void fill_write_buffer() {
 
             // envelope modulation
             float envelope = synth_envelope_process(voice);
-            
-            // mix
+
+            // mix - average
+            // TODO: this is naive?
             mix += sample * envelope;
         }
 
         mix /= (float)VOICES_LENGTH;
+
+        if (_context->filterEnabled) {
+            mix = synth_filter_low_pass(_context->filterCutoff,
+                                        _context->filterResonance, mix);
+        }
 
         // scale to 8 bit in a 16-bit container
         unsigned short out = (mix + 1.f) * 127.f;
@@ -76,6 +85,10 @@ static void synth_audio_context_init(float clk_div) {
     _context->SampleRate = systemClockHz / (float)(clk_div * 255);
     _context->SamplesElapsed = 0;
     _context->Volume = 0.3;
+
+    _context->filterEnabled = true;
+    _context->filterCutoff = 1000.f;
+    _context->filterResonance = 1.f;
 
     _context->Voices[0].envelopeState = OFF;
     _context->Voices[0].frequency = 440;
@@ -154,11 +167,11 @@ int main() {
     printf("Synth starting.\n");
     sleep_ms(100);
 
-    float clk_div = 26.f;
-
     synth_audio_context_init(clk_div);
     synth_envelope_init(_context->SampleRate);
     synth_waveform_init(_context->SampleRate);
+    synth_filter_init(_context->SampleRate);
+    synth_midi_init(_context->SampleRate);
 
     uint slice = synth_pwm_init(clk_div);
     synth_dma_init(slice);
