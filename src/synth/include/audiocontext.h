@@ -20,18 +20,10 @@ typedef enum EnvelopeState {
 typedef struct Voice {
     float frequency;
     Waveform_t waveform;
-    float attack;
-    float decay;
-    float sustain;
-    float release;
-    bool triggerAttack;
-    EnvelopeState_t envelopeState;
-    uint32_t envelopeCounter;
-    uint32_t envelopeDuration;
-    float envelopeReadPointer;
-    float envelopePhase;
     float detune;
     float wavetableStride;
+    float waveTableReadPointer;
+    float waveTablePhase;
 } Voice_t;
 
 typedef struct AudioContext {
@@ -43,6 +35,12 @@ typedef struct AudioContext {
     bool filterEnabled;
     float filterCutoff;
     float filterResonance;
+    float attack;
+    float decay;
+    float sustain;
+    float release;
+    bool triggerAttack;
+    float envelope;
 } AudioContext_t;
 
 #endif

@@ -9,7 +9,7 @@
 
 static float _sampleRate;
 static float _maxFilterCutoff;
-static float _notePriority[12] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+static float _notePriority[12] = {0};
 static uint8_t _notePriorityIndex = 0;
 
 float synth_midi_frequency_from_midi_note(uint8_t note) {
@@ -20,14 +20,17 @@ static void note_on(AudioContext_t* context, uint8_t note, uint8_t velocity) {
     float sustain = (float)velocity / 128.f;
     float pitch = synth_midi_frequency_from_midi_note(note);
 
+    context->sustain = sustain;
+
     for (int i = 0; i < VOICES_LENGTH; i++) {
         Voice_t* voice = &context->voices[i];
 
-        voice->sustain = sustain;
         voice->frequency = pitch;
-
-        synth_envelope_note_on(voice);
+        voice->wavetableStride =
+            (voice->frequency * voice->detune) / _sampleRate;
     }
+
+    synth_envelope_note_on(context);
 
     if (_notePriorityIndex < 11) _notePriorityIndex++;
 
@@ -42,30 +45,50 @@ static void note_off(AudioContext_t* context) {
     priorPitch = _notePriority[_notePriorityIndex];
     _notePriority[_notePriorityIndex] = 0;
 
+    if (priorPitch == 0.f) {
+        synth_envelope_note_off(context);
+        return;
+    }
+
     for (int i = 0; i < VOICES_LENGTH; i++) {
         Voice_t* voice = &context->voices[i];
 
-        if (priorPitch == 0.f)
-            synth_envelope_note_off(voice);
-        else
-            voice->frequency = priorPitch;
+        voice->frequency = priorPitch;
+        voice->wavetableStride =
+            (voice->frequency * voice->detune) / _sampleRate;
     }
 }
 
 void control_change(AudioContext_t* context, uint8_t command,
                     uint8_t parameter) {
     switch (command) {
-        case SYNTH_MIDI_CC_CUTOFF:
-            context->filterCutoff = _maxFilterCutoff * (float)parameter / 128.f;
+        case SYNTH_MIDI_CC_CUTOFF: {
+            float filterCutoff = (float)parameter / 128.f;
+            if (filterCutoff < 0.01f) filterCutoff = 0.01f;
+            context->filterCutoff = _maxFilterCutoff * filterCutoff;
             synth_filter_calculate_coefficients(context->filterCutoff,
                                                 context->filterResonance);
             break;
+        }
         case SYNTH_MIDI_CC_RESONANCE: {
             float resonance = (float)parameter / 128.f;
-            if (resonance < 2.f) resonance++;
+            if (resonance < 0.01f) resonance = 0.01f;
             context->filterResonance = resonance;
             synth_filter_calculate_coefficients(context->filterCutoff,
                                                 context->filterResonance);
+            break;
+        }
+        case SYNTH_MIDI_CC_VOLUME:
+            context->volume = (float)parameter / 128.f;
+            break;
+
+        case SYNTH_MIDI_CC_MODWHEEL: {
+            float detune = (float)parameter / 64.f;
+
+            context->voices[1].detune = detune;
+            context->voices[1].wavetableStride =
+                (context->voices[1].frequency * context->voices[1].detune) /
+                _sampleRate;
             break;
         }
         default:
@@ -104,5 +127,5 @@ void synth_midi_task(AudioContext_t* context) {
 
 void synth_midi_init(float sampleRate) {
     _sampleRate = sampleRate;
-    _maxFilterCutoff = 3000.f;
+    _maxFilterCutoff = 2000.f;
 }

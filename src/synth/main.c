@@ -36,12 +36,9 @@ static void fill_write_buffer() {
 
             float sample = synth_waveform_sample(voice);
 
-            // envelope modulation
-            float envelope = synth_envelope_process(voice);
-
             // mix - average
             // TODO: this is naive?
-            mix += sample * envelope;
+            mix += sample;
         }
 
         // average
@@ -52,8 +49,12 @@ static void fill_write_buffer() {
         // scale to 8 bit in a 16-bit container
         unsigned short out = (mix + 1.f) * 127.f;
 
+        // envelope modulation
+        float envelope = synth_envelope_process(_context);
+
         // final volume
-        _context->audioOut[i] = out * _context->volume;
+        _context->envelope = envelope;
+        _context->audioOut[i] = out * envelope * _context->volume;
         _context->samplesElapsed++;
     }
 }
@@ -80,33 +81,27 @@ static void synth_audio_context_init(float clk_div) {
         frequency_count_khz(CLOCKS_FC0_SRC_VALUE_CLK_SYS) * 1000;
 
     _context = malloc(sizeof(AudioContext_t));
+
     _context->sampleRate = systemClockHz / (float)(clk_div * 255);
     _context->samplesElapsed = 0;
     _context->volume = 0.3;
-
     _context->filterEnabled = true;
     _context->filterCutoff = 1000.f;
     _context->filterResonance = 1.f;
-
-    _context->voices[0].envelopeState = OFF;
+    _context->attack = 0.05;
+    _context->decay = 0.05;
+    _context->sustain = 1.f;
+    _context->release = 0.5f;
+    
     _context->voices[0].frequency = 440;
     _context->voices[0].waveform = SAW;
-    _context->voices[0].attack = 0.05;
-    _context->voices[0].decay = 0.05;
-    _context->voices[0].sustain = 1.f;
-    _context->voices[0].release = 0.5f;
     _context->voices[0].detune = 1.f;
     _context->voices[0].wavetableStride = _context->voices[0].frequency *
                                           _context->voices[0].detune /
                                           _context->sampleRate;
 
-    _context->voices[1].envelopeState = OFF;
     _context->voices[1].frequency = 440;
-    _context->voices[1].waveform = SAW;
-    _context->voices[1].attack = 0.05;
-    _context->voices[1].decay = 0.05;
-    _context->voices[1].sustain = 1.f;
-    _context->voices[1].release = 1.f;
+    _context->voices[1].waveform = SQUARE;
     _context->voices[1].detune = 1.01f;
     _context->voices[1].wavetableStride = _context->voices[1].frequency *
                                           _context->voices[1].detune /
@@ -177,7 +172,7 @@ int main() {
     tud_init(BOARD_TUD_RHPORT);
 
     while (true) {
-        // synth_play_test(&_context->Voices[0]);
+        // synth_play_test(_context);
 
         tud_task();  // tinyusb device task
         synth_led_blink_task();

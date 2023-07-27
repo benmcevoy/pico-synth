@@ -7,31 +7,31 @@
 static float _sampleRate = 0.f;
 
 static float read_from_wt(Voice_t* voice, float* waveTable) {
-    uint indexBelow = floorf(voice->envelopeReadPointer);
+    uint indexBelow = floorf(voice->waveTableReadPointer);
     uint indexAbove = indexBelow + 1;
 
     if (indexAbove >= WAVE_TABLE_LENGTH) indexAbove -= WAVE_TABLE_LENGTH;
 
-    float fractionAbove = voice->envelopeReadPointer - indexBelow;
+    float fractionAbove = voice->waveTableReadPointer - indexBelow;
     float fractionBelow = 1.f - fractionAbove;
 
     float value = fractionBelow * waveTable[indexBelow] +
                   fractionAbove * waveTable[indexAbove];
 
-    voice->envelopeReadPointer += WAVE_TABLE_LENGTH * voice->wavetableStride;
+    voice->waveTableReadPointer += WAVE_TABLE_LENGTH * voice->wavetableStride;
 
-    while (voice->envelopeReadPointer >= WAVE_TABLE_LENGTH)
-        voice->envelopeReadPointer -= WAVE_TABLE_LENGTH;
+    while (voice->waveTableReadPointer >= WAVE_TABLE_LENGTH)
+        voice->waveTableReadPointer -= WAVE_TABLE_LENGTH;
 
     return value;
 }
 
 static float square(Voice_t* voice) {
-    float value = (voice->envelopePhase < M_PI) ? 1.f : -1.f;
+    float value = (voice->waveTablePhase < M_PI) ? 1.f : -1.f;
 
-    voice->envelopePhase += TWO_PI * voice->wavetableStride;
+    voice->waveTablePhase += TWO_PI * voice->wavetableStride;
 
-    if (voice->envelopePhase > TWO_PI) voice->envelopePhase -= TWO_PI;
+    if (voice->waveTablePhase > TWO_PI) voice->waveTablePhase -= TWO_PI;
 
     return value;
 }

@@ -12,6 +12,10 @@
 
 // control command
 #define SYNTH_MIDI_CC 176 // 0xB0
+
+#define SYNTH_MIDI_CC_MODWHEEL 1
+#define SYNTH_MIDI_CC_VOLUME 7
+
 // - MIDI CC 71	Sound Controller 2	Allocated to filter resonance/Q.
 #define SYNTH_MIDI_CC_RESONANCE 71
 // - MIDI CC 72	Sound Controller 3	Allocated to the amp envelope release time. Changes how long notes fade out.

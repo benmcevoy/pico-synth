@@ -1095,12 +1095,12 @@ so my work is cut out.
 
 ## monophonic
 
-- fix the note prioritiy
-- only voice1+2
+- fix the note priority
+DONE - only voice1+2
 
 ## Amplitude envelope
 
-- only voice1+2 - applies to mix
+DONE - only voice1+2 - applies to mix
   
 
 ## Filter envelope
