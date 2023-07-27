@@ -83,6 +83,7 @@ void control_change(AudioContext_t* context, uint8_t command,
             break;
 
         case SYNTH_MIDI_CC_MODWHEEL: {
+            // TODO: detune is really a log parameter, so it drops off to zero pretty cra cra
             float detune = (float)parameter / 64.f;
 
             context->voices[1].detune = detune;
