@@ -5,13 +5,13 @@ set(TINYUSB_FAMILY_PROJECT_NAME_PREFIX "tinyusb_dev_")
 
 add_executable(${projectName} main.c 
     usb_descriptors.c
-    lib/waveform.c 
     lib/envelope.c
+    lib/filter.c
     lib/midi.c
     lib/pitchtable.c
-    lib/filter.c)
+    lib/waveform.c)
 
-# disable usb output, enable uart output
+# configure UART
 pico_enable_stdio_usb(${projectName} 0)
 pico_enable_stdio_uart(${projectName} 1)
 

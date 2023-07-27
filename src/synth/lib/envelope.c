@@ -2,7 +2,7 @@
 
 static float _sampleRate = 0.f;
 
-static  float elapsed(float time, float duration) {
+static float elapsed(float time, float duration) {
     return (duration - time) / duration;
 }
 
@@ -10,25 +10,30 @@ static bool has_elapsed(float time, float duration) {
     return elapsed(time, duration) >= 1.f;
 }
 
-static  float linear_easing(float time, float duration, float start, float end) {
+static float linear_easing(float time, float duration, float start, float end) {
     return has_elapsed(time, duration)
                ? end
                : start + elapsed(time, duration) * (end - start);
 }
 
-void synth_envelope_note_on(Voice_t* voice) { voice->triggerAttack = true; }
+void synth_envelope_note_on(Voice_t* voice) {
+    voice->triggerAttack = true;
+    voice->wavetableStride = (voice->frequency * voice->detune) / _sampleRate;
+}
 
 void synth_envelope_note_off(Voice_t* voice) { voice->triggerAttack = false; }
 
 float synth_envelope_process(Voice_t* voice) {
-    if (voice->triggerAttack && (voice->envelopeState == OFF || voice->envelopeState == RELEASE)) {
+    if (voice->triggerAttack &&
+        (voice->envelopeState == OFF || voice->envelopeState == RELEASE)) {
         voice->envelopeDuration = voice->attack * _sampleRate;
         voice->envelopeCounter = voice->envelopeDuration;
         voice->envelopeState = ATTACK;
     }
 
     if (!voice->triggerAttack &&
-        (voice->envelopeState == ATTACK || voice->envelopeState == DECAY || voice->envelopeState == SUSTAIN)) {
+        (voice->envelopeState == ATTACK || voice->envelopeState == DECAY ||
+         voice->envelopeState == SUSTAIN)) {
         voice->envelopeDuration = voice->release * _sampleRate;
         voice->envelopeCounter = voice->envelopeDuration;
         voice->envelopeState = RELEASE;
@@ -46,7 +51,8 @@ float synth_envelope_process(Voice_t* voice) {
                 return 1.f;
             }
 
-            return linear_easing(voice->envelopeCounter--, voice->envelopeDuration, 0.f, 1.f);
+            return linear_easing(voice->envelopeCounter--,
+                                 voice->envelopeDuration, 0.f, 1.f);
 
         case DECAY:
             if (voice->envelopeCounter == 0) {
@@ -54,7 +60,8 @@ float synth_envelope_process(Voice_t* voice) {
                 return voice->sustain;
             }
 
-            return linear_easing(voice->envelopeCounter--, voice->envelopeDuration, 1.f, voice->sustain);
+            return linear_easing(voice->envelopeCounter--,
+                                 voice->envelopeDuration, 1.f, voice->sustain);
 
         case SUSTAIN:
             return voice->sustain;
@@ -65,7 +72,8 @@ float synth_envelope_process(Voice_t* voice) {
                 return 0.f;
             }
 
-            return linear_easing(voice->envelopeCounter--, voice->envelopeDuration, voice->sustain, 0.f);
+            return linear_easing(voice->envelopeCounter--,
+                                 voice->envelopeDuration, voice->sustain, 0.f);
 
         default:
             return 0.f;

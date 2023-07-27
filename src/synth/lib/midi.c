@@ -4,6 +4,7 @@
 #include <stdlib.h>
 
 #include "include/envelope.h"
+#include "include/filter.h"
 #include "tusb.h"
 
 static float _sampleRate;
@@ -20,7 +21,7 @@ static void note_on(AudioContext_t* context, uint8_t note, uint8_t velocity) {
     float pitch = synth_midi_frequency_from_midi_note(note);
 
     for (int i = 0; i < VOICES_LENGTH; i++) {
-        Voice_t* voice = &context->Voices[i];
+        Voice_t* voice = &context->voices[i];
 
         voice->sustain = sustain;
         voice->frequency = pitch;
@@ -42,7 +43,7 @@ static void note_off(AudioContext_t* context) {
     _notePriority[_notePriorityIndex] = 0;
 
     for (int i = 0; i < VOICES_LENGTH; i++) {
-        Voice_t* voice = &context->Voices[i];
+        Voice_t* voice = &context->voices[i];
 
         if (priorPitch == 0.f)
             synth_envelope_note_off(voice);
@@ -56,10 +57,17 @@ void control_change(AudioContext_t* context, uint8_t command,
     switch (command) {
         case SYNTH_MIDI_CC_CUTOFF:
             context->filterCutoff = _maxFilterCutoff * (float)parameter / 128.f;
+            synth_filter_calculate_coefficients(context->filterCutoff,
+                                                context->filterResonance);
             break;
-        case SYNTH_MIDI_CC_RESONANCE:
-            context->filterResonance = (float)parameter / 128.f;
+        case SYNTH_MIDI_CC_RESONANCE: {
+            float resonance = (float)parameter / 128.f;
+            if (resonance < 2.f) resonance++;
+            context->filterResonance = resonance;
+            synth_filter_calculate_coefficients(context->filterCutoff,
+                                                context->filterResonance);
             break;
+        }
         default:
             break;
     }
@@ -96,5 +104,5 @@ void synth_midi_task(AudioContext_t* context) {
 
 void synth_midi_init(float sampleRate) {
     _sampleRate = sampleRate;
-    _maxFilterCutoff = _sampleRate / 2.f;
+    _maxFilterCutoff = 3000.f;
 }

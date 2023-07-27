@@ -6,8 +6,10 @@
 #define M_PI 3.14159265358979323846f
 #endif
 
-void synth_filter_init(float sampleRate);
+void synth_filter_init(float sampleRate, float cutOffFrequency, float resonance);
 
-float synth_filter_low_pass(float cutOffFrequency, float resonance, float sample);
+void synth_filter_calculate_coefficients(float cutOffFrequency, float resonance);
+
+float synth_filter_low_pass(float sample);
 
 #endif

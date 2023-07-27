@@ -19,7 +19,7 @@
 
 #define PIN 26
 
-static float clk_div = 40.f;
+static float clk_div = 20.f;
 
 static unsigned short _buffer0[BUFFER_LENGTH] = {0};
 static unsigned short _buffer1[BUFFER_LENGTH] = {0};
@@ -32,7 +32,7 @@ static void fill_write_buffer() {
         float mix = 0.f;
 
         for (int v = 0; v < VOICES_LENGTH; v++) {
-            Voice_t* voice = &_context->Voices[v];
+            Voice_t* voice = &_context->voices[v];
 
             float sample = synth_waveform_sample(voice);
 
@@ -44,19 +44,17 @@ static void fill_write_buffer() {
             mix += sample * envelope;
         }
 
+        // average
         mix /= (float)VOICES_LENGTH;
 
-        if (_context->filterEnabled) {
-            mix = synth_filter_low_pass(_context->filterCutoff,
-                                        _context->filterResonance, mix);
-        }
+        if (_context->filterEnabled) mix = synth_filter_low_pass(mix);
 
         // scale to 8 bit in a 16-bit container
         unsigned short out = (mix + 1.f) * 127.f;
 
         // final volume
-        _context->AudioOut[i] = out * _context->Volume;
-        _context->SamplesElapsed++;
+        _context->audioOut[i] = out * _context->volume;
+        _context->samplesElapsed++;
     }
 }
 
@@ -71,7 +69,7 @@ static void __isr __time_critical_func(dma_irq_handler)() {
         _pwmDmaChannel, _swap ? _buffer0 : _buffer1, BUFFER_LENGTH);
 
     // fill write buffer
-    _context->AudioOut = _swap ? _buffer1 : _buffer0;
+    _context->audioOut = _swap ? _buffer1 : _buffer0;
 
     fill_write_buffer();
 }
@@ -82,40 +80,37 @@ static void synth_audio_context_init(float clk_div) {
         frequency_count_khz(CLOCKS_FC0_SRC_VALUE_CLK_SYS) * 1000;
 
     _context = malloc(sizeof(AudioContext_t));
-    _context->SampleRate = systemClockHz / (float)(clk_div * 255);
-    _context->SamplesElapsed = 0;
-    _context->Volume = 0.3;
+    _context->sampleRate = systemClockHz / (float)(clk_div * 255);
+    _context->samplesElapsed = 0;
+    _context->volume = 0.3;
 
     _context->filterEnabled = true;
     _context->filterCutoff = 1000.f;
     _context->filterResonance = 1.f;
 
-    _context->Voices[0].envelopeState = OFF;
-    _context->Voices[0].frequency = 440;
-    _context->Voices[0].waveform = SAW;
-    _context->Voices[0].attack = 0.05;
-    _context->Voices[0].decay = 0.05;
-    _context->Voices[0].sustain = 1.f;
-    _context->Voices[0].release = 0.5f;
-    _context->Voices[0].detune = 1.f;
+    _context->voices[0].envelopeState = OFF;
+    _context->voices[0].frequency = 440;
+    _context->voices[0].waveform = SAW;
+    _context->voices[0].attack = 0.05;
+    _context->voices[0].decay = 0.05;
+    _context->voices[0].sustain = 1.f;
+    _context->voices[0].release = 0.5f;
+    _context->voices[0].detune = 1.f;
+    _context->voices[0].wavetableStride = _context->voices[0].frequency *
+                                          _context->voices[0].detune /
+                                          _context->sampleRate;
 
-    _context->Voices[1].envelopeState = OFF;
-    _context->Voices[1].frequency = 440;
-    _context->Voices[1].waveform = SAW;
-    _context->Voices[1].attack = 0.05;
-    _context->Voices[1].decay = 0.05;
-    _context->Voices[1].sustain = 1.f;
-    _context->Voices[1].release = 1.f;
-    _context->Voices[1].detune = 2.01f;
-
-    _context->Voices[2].envelopeState = OFF;
-    _context->Voices[2].frequency = 440;
-    _context->Voices[2].waveform = SAW;
-    _context->Voices[2].attack = 0.05;
-    _context->Voices[2].decay = 0.05;
-    _context->Voices[2].sustain = 1.f;
-    _context->Voices[2].release = 0.5f;
-    _context->Voices[2].detune = 1.01f;
+    _context->voices[1].envelopeState = OFF;
+    _context->voices[1].frequency = 440;
+    _context->voices[1].waveform = SAW;
+    _context->voices[1].attack = 0.05;
+    _context->voices[1].decay = 0.05;
+    _context->voices[1].sustain = 1.f;
+    _context->voices[1].release = 1.f;
+    _context->voices[1].detune = 1.01f;
+    _context->voices[1].wavetableStride = _context->voices[1].frequency *
+                                          _context->voices[1].detune /
+                                          _context->sampleRate;
 }
 
 static uint synth_pwm_init(float clk_div) {
@@ -168,10 +163,11 @@ int main() {
     sleep_ms(100);
 
     synth_audio_context_init(clk_div);
-    synth_envelope_init(_context->SampleRate);
-    synth_waveform_init(_context->SampleRate);
-    synth_filter_init(_context->SampleRate);
-    synth_midi_init(_context->SampleRate);
+    synth_waveform_init(_context->sampleRate);
+    synth_envelope_init(_context->sampleRate);
+    synth_filter_init(_context->sampleRate, _context->filterCutoff,
+                      _context->filterResonance);
+    synth_midi_init(_context->sampleRate);
 
     uint slice = synth_pwm_init(clk_div);
     synth_dma_init(slice);

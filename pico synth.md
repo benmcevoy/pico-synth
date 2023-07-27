@@ -988,23 +988,140 @@ Or alternatively look at using a DIN plug and midi over UART.  Sounds like work.
 
 - MIDI CC 70-79
 - MIDI CC70	Sound Controller 1	A control for affecting how the sound is produced. Used for filters, effects etc.
-- MIDI CC 71	Sound Controller 2	Allocated to filter resonance/Q.
+DONE - MIDI CC 71	Sound Controller 2	Allocated to filter resonance/Q.
 - MIDI CC 72	Sound Controller 3	Allocated to the amp envelope release time. Changes how long notes fade out.
 - MIDI CC 73	Sound Controller 4	Allocated to the amp envelope attack time. Changes how fast the volume rises from the keypress to max volume.
-- MIDI CC 74	Sound Controller 5	Allocated to the filter cutoff frequency Hz value.
+DONE - MIDI CC 74	Sound Controller 5	Allocated to the filter cutoff frequency Hz value.
 - MIDI CC 75 – 79	Sound Controller 6-10	An extra control for affecting how the sound is produced. Used for filters, effects etc. 
 - MIDI CC 94	Effect 4 Depth	Usually a control for the amount of detuning.
-
-## Echo echo echo
 
 
 ## Performance
 
 profiling - measure first. might be some low hanging fruit here.
 
+i did some quick measuring and the FILTER is a pig :)
+
 the envelope generation is almost all linear interpolation.  Pico has a hardware interpolator.  Just no idea how to use it...
 
 fixed point math.
 
 I read somewhere the interpolator can also be used for reading the wave table. Maybe.
+
+
+### simple tweaks
+
+baseline clk_div 30
+
+comment out envelope
+clk_div 29
+
+comment out filter
+clk_div 18
+
+remove tanf call
+clk_div 24
+
+1 voice and no filter
+clk_div 9
+
+avoid division in wave table lookup
+clk_div 22 !!! wow
+
+compute filter co-eff on midi cc instead of constantly
+clk_div 12
+
+
+
+By precomputing the "wave table stride" I can avoid a division in the tight loop that populates the buffer
+this bumps us from ~16kHz to ~22kHz
+
+By only calculating the filter coefficients when the filter settings change, i.e. when a midi cc command occurs
+this bumps us from ~22kHz to ~40kHz
+
+so back in business.
+
+I need to spike out a seperate test project to investigate fixed point/stdfix.h
+
+OK - my tests above were no good.  was not actually using the wavetable.
+
+
+
+## Noise
+
+I want tonal noise.  I am not sure what it is called, but it's noise that is correlated to a frequency.
+
+Reviewing the c64 and the NES - both use a LSFR.  Setting the frequency changes the timing of the LFSR, e.g. high frequency means the LFSR runs at a higher clock.
+
+I have implemented two LFSR for pseudo random numbers.  One is the actual c64 algorithm (as near as people can make out).
+
+I **think** I need an IRQ or some timer that will generate the next random/PRNG into a register.  Then I can just read that register.
+
+The IRQ would ideally want to be per voice and timing of the IRQ directly proportional to the voice frequency.  I think.
+
+This would mimic (I think!) what happens on the NES/C64.
+
+This is apparantly just called periodic random noise or just pseudo random noise.
+
+
+## Settling on an instrument design
+
+Now we have a clearer picture about the constraints we are operating in.
+
+I have also implemented **enough** features to start to get a feel.
+
+Need to settle on an instrument design that works in these constraints.
+
+For instance - a monophonic synth might yield a simple design, as envelope could be on the final mix instead of per voice.
+
+Or the filter could be invested in, as it sounds a bit weak at the moment.
+
+Maybe I could string a few pico together with I2S as a kinda modular physical/digital synth?  That is an idea.  One pico does oscillator, another filter, another echo, etc.
+
+features:
+
+- monophonic, two oscillators
+- amplitude envelope (on the mix)
+- osc3 as LFO 
+- filter envelope
+
+and if we have the cpu
+- arp
+- delay
+
+and we need patches or some kinda controller with lots of knobs
+
+so my work is cut out.
+
+## monophonic
+
+- fix the note prioritiy
+- only voice1+2
+
+## Amplitude envelope
+
+- only voice1+2 - applies to mix
+  
+
+## Filter envelope
+
+- MIDI CC 72	Sound Controller 3	Allocated to the amp envelope release time. Changes how long notes fade out.
+- MIDI CC 73	Sound Controller 4	Allocated to the amp envelope attack time. Changes how fast the volume rises from the keypress to max volume.
+
+## LFO
+
+has to feed into e.g:
+
+- detune v2
+- filter resonance
+- filter cutoff
+- Amplitude envelope sustain
+
+## Arppegiator
+
+um? up down random
+
+how to program?  hold down many keys?  use a chord table?
+
+## Echo echo echo
 

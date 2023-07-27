@@ -34,6 +34,9 @@
         "envelope.h": "c",
         "stdfix.h": "c",
         "midi.h": "c",
-        "filter.h": "c"
+        "filter.h": "c",
+        "tusb.h": "c",
+        "audio_pwm.h": "c",
+        "noise.h": "c"
     }
 }

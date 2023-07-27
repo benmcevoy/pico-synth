@@ -1,5 +1,8 @@
 #include "../include/waveform.h"
+
 #include <math.h>
+
+#include "../include/noise.h"
 
 static float _sampleRate = 0.f;
 
@@ -15,10 +18,10 @@ static float read_from_wt(Voice_t* voice, float* waveTable) {
     float value = fractionBelow * waveTable[indexBelow] +
                   fractionAbove * waveTable[indexAbove];
 
-    voice->envelopeReadPointer +=
-        WAVE_TABLE_LENGTH * (voice->frequency * voice->detune) / _sampleRate;
+    voice->envelopeReadPointer += WAVE_TABLE_LENGTH * voice->wavetableStride;
 
-    while (voice->envelopeReadPointer >= WAVE_TABLE_LENGTH) voice->envelopeReadPointer -= WAVE_TABLE_LENGTH;
+    while (voice->envelopeReadPointer >= WAVE_TABLE_LENGTH)
+        voice->envelopeReadPointer -= WAVE_TABLE_LENGTH;
 
     return value;
 }
@@ -26,17 +29,14 @@ static float read_from_wt(Voice_t* voice, float* waveTable) {
 static float square(Voice_t* voice) {
     float value = (voice->envelopePhase < M_PI) ? 1.f : -1.f;
 
-    voice->envelopePhase += TWO_PI * (voice->frequency * voice->detune) / _sampleRate;
+    voice->envelopePhase += TWO_PI * voice->wavetableStride;
 
     if (voice->envelopePhase > TWO_PI) voice->envelopePhase -= TWO_PI;
 
     return value;
 }
 
-static float noise(Voice_t* voice) {
-    // random between -1..1
-    return (rand() / (float)(RAND_MAX)) * 2.f - 1.f;
-}
+static float noise(Voice_t* voice) { return synth_noise_next_prng(); }
 
 float synth_waveform_sample(Voice_t* voice) {
     switch (voice->waveform) {
