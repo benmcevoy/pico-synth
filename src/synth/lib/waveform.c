@@ -74,5 +74,5 @@ fix16 synth_waveform_sample(Voice_t* voice) {
 void synth_waveform_init() {
     _waveTableLength = int2fix16(WAVE_TABLE_LENGTH);
     _pi = float2fix16(M_PI);
-    _twoPi = float2fix16(TWO_PI);
+    _twoPi = float2fix16(M_PI * 2.f);
 }

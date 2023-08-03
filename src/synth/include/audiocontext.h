@@ -7,7 +7,7 @@
 #include "pico/stdlib.h"
 
 #define BUFFER_LENGTH 512
-#define VOICES_LENGTH 1
+#define VOICES_LENGTH 2
 
 typedef enum Waveform { SINE = 0, SQUARE, SAW, TRIANGLE, NOISE } Waveform_t;
 typedef enum EnvelopeState {
@@ -33,10 +33,6 @@ typedef struct AudioContext {
     uint32_t sampleRate;
     Voice_t voices[VOICES_LENGTH];
     fix16 volume;
-
-    bool filterEnabled;
-    float filterCutoff;
-    float filterResonance;
 
     bool triggerAttack;
     fix16 envelope;

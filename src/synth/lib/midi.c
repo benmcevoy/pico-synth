@@ -4,12 +4,10 @@
 #include <stdlib.h>
 
 #include "include/envelope.h"
-#include "include/filter.h"
 #include "include/fixedpoint.h"
 #include "tusb.h"
 
 static uint32_t _sampleRate = 0;
-static float _maxFilterCutoff;
 static float _notePriority[12] = {0};
 static uint8_t _notePriorityIndex = 0;
 
@@ -61,22 +59,6 @@ static void note_off(AudioContext_t* context) {
 void control_change(AudioContext_t* context, uint8_t command,
                     uint8_t parameter) {
     switch (command) {
-        case SYNTH_MIDI_CC_CUTOFF: {
-            float filterCutoff = (float)parameter / 128.f;
-            if (filterCutoff < 0.01f) filterCutoff = 0.01f;
-            context->filterCutoff = _maxFilterCutoff * filterCutoff;
-            synth_filter_calculate_coefficients(context->filterCutoff,
-                                                context->filterResonance);
-            break;
-        }
-        case SYNTH_MIDI_CC_RESONANCE: {
-            float resonance = (float)parameter / 128.f;
-            if (resonance < 0.01f) resonance = 0.01f;
-            context->filterResonance = resonance;
-            synth_filter_calculate_coefficients(context->filterCutoff,
-                                                context->filterResonance);
-            break;
-        }
         case SYNTH_MIDI_CC_VOLUME: {
             // TODO: need to test this not sure I got that right
             fix16 volume = int2fix16(parameter) >> 8;
@@ -129,5 +111,4 @@ void synth_midi_task(AudioContext_t* context) {
 
 void synth_midi_init(uint32_t sampleRate) {
     _sampleRate = sampleRate;
-    _maxFilterCutoff = 2000.f;
 }

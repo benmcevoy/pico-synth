@@ -8,13 +8,6 @@
 #define M_PI 3.14159265358979323846f
 #endif
 
-#ifndef M_PI_2
-#define M_PI_2 1.57079632679489661923f /* pi/2 */
-#endif
-
-#ifndef TWO_PI
-#define TWO_PI 6.28318530717958647692f /* pi*2 */
-#endif
 
 #define WAVE_TABLE_LENGTH 512
 

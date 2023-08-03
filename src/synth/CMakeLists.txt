@@ -6,7 +6,6 @@ set(TINYUSB_FAMILY_PROJECT_NAME_PREFIX "tinyusb_dev_")
 add_executable(${projectName} main.c 
     usb_descriptors.c
     lib/envelope.c
-    lib/filter.c
     lib/midi.c
     lib/pitchtable.c
     lib/waveform.c)

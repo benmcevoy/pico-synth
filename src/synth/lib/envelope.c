@@ -1,7 +1,7 @@
 #include "../include/envelope.h"
 
 static fix16 _sampleRate = 0;
-static int SR_FACTOR = 4;
+static int SR_FACTOR = 5;
 static EnvelopeState_t _envelopeState = OFF;
 static fix16 _time = 0;
 static fix16 _duration = 0;

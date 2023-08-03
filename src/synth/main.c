@@ -7,7 +7,6 @@
 #include "hardware/pwm.h"
 #include "include/audiocontext.h"
 #include "include/envelope.h"
-#include "include/filter.h"
 #include "include/fixedpoint.h"
 #include "include/ledblink.h"
 #include "include/midi.h"
@@ -20,7 +19,10 @@
 
 #define PIN 26
 
-static float clk_div = 10.f;
+// uncomment to use midi or comment out for the test code
+#define USE_MIDI
+
+static float clk_div = 3.f;
 static uint16_t _buffer0[BUFFER_LENGTH] = {0};
 static uint16_t _buffer1[BUFFER_LENGTH] = {0};
 static bool _swap = false;
@@ -42,20 +44,19 @@ static void fill_write_buffer() {
 
         mix = divfix16(mix, MIXFACTOR);
 
-        // if (_context->filterEnabled) mix = synth_filter_low_pass(mix);
-
         // envelope modulation
         fix16 envelope = synth_envelope_process(_context);
 
-        // scale to an 8 bit volume in a 16-bit container 
+        // scale to an 8 bit volume in a 16-bit container
 
-        // get amplitude - this is still in the range -1..1 (as a fix16) so add one to it 
-        // so now is 0..2, it's never exactly 2... as far as we care
-        fix16 amplitude = multfix16(multfix16(envelope, mix), _context->volume) + FIX16_UNIT;
-        
+        // get amplitude - this is still in the range -1..1 (as a fix16) so add
+        // one to it so now is 0..2, it's never exactly 2... as far as we care
+        fix16 amplitude =
+            multfix16(multfix16(envelope, mix), _context->volume) + FIX16_UNIT;
+
         // scale to 8 bits by shifting >> 9  and then cast to uint16
-        // shifting by 9 moves the first whole number (at bit 16), which is a zero or a one 
-        // into the lower byte
+        // shifting by 9 moves the first whole number (at bit 16), which is a
+        // zero or a one into the lower byte
 
         uint16_t out = (uint16_t)(amplitude >> 9);
 
@@ -92,9 +93,6 @@ static void synth_audio_context_init(float clk_div) {
     _context->sampleRate = systemClockHz / (clk_div * 255);
     _context->samplesElapsed = 0;
     _context->volume = float2fix16(0.3);
-    _context->filterEnabled = false;
-    _context->filterCutoff = 500.f;
-    _context->filterResonance = 0.7f;
     _context->attack = float2fix16(0.05);
     _context->decay = float2fix16(0.05f);
     _context->sustain = float2fix16(0.5f);
@@ -103,8 +101,9 @@ static void synth_audio_context_init(float clk_div) {
     for (int v = 0; v < VOICES_LENGTH; v++) {
         _context->voices[v].frequency = PITCH_C3;
         _context->voices[v].waveform = SQUARE;
-        _context->voices[v].detune = 1.f;
-        synth_audiocontext_set_wavetable_stride(&_context->voices[v], _context->sampleRate);
+        _context->voices[v].detune = 1.f + v * 0.01;
+        synth_audiocontext_set_wavetable_stride(&_context->voices[v],
+                                                _context->sampleRate);
     }
 }
 
@@ -161,25 +160,27 @@ int main() {
 
     synth_audio_context_init(clk_div);
     synth_envelope_init(_context->sampleRate);
-    synth_filter_init(_context->sampleRate, _context->filterCutoff,
-                      _context->filterResonance);
     synth_midi_init(_context->sampleRate);
-synth_waveform_init();
+    synth_waveform_init();
     uint slice = synth_pwm_init(clk_div);
     synth_dma_init(slice);
-    // board_init();
-
-    // init device stack on configured roothub port
-    // tud_init(BOARD_TUD_RHPORT);
 
     printf("SampleRate: %d\n", _context->sampleRate);
 
-    while (true) {
-        synth_test_play(_context);
+#ifdef USE_MIDI
+    board_init();
+    // init device stack on configured roothub port
+    tud_init(BOARD_TUD_RHPORT);
+#endif
 
-        // tud_task();  // tinyusb device task
-        // synth_led_blink_task();
-        // synth_midi_task(_context);
+    while (true) {
+#ifndef USE_MIDI
+        synth_test_play(_context);
+#else
+        tud_task();  // tinyusb device task
+        synth_led_blink_task();
+        synth_midi_task(_context);
+#endif
     }
 }
 
