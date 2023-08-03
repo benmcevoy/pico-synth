@@ -3,10 +3,11 @@
 
 #include <stdlib.h>
 
+#include "fixedpoint.h"
 #include "pico/stdlib.h"
 
 #define BUFFER_LENGTH 512
-#define VOICES_LENGTH 2
+#define VOICES_LENGTH 1
 
 typedef enum Waveform { SINE = 0, SQUARE, SAW, TRIANGLE, NOISE } Waveform_t;
 typedef enum EnvelopeState {
@@ -18,29 +19,35 @@ typedef enum EnvelopeState {
 } EnvelopeState_t;
 
 typedef struct Voice {
+    float detune;
     float frequency;
     Waveform_t waveform;
-    float detune;
-    float wavetableStride;
-    float waveTableReadPointer;
-    float waveTablePhase;
+    fix16 wavetableStride;
+    fix16 waveTableReadPointer;
+    fix16 waveTablePhase;
 } Voice_t;
 
 typedef struct AudioContext {
-    unsigned short* audioOut;
+    uint16_t* audioOut;
     size_t samplesElapsed;
-    float sampleRate;
+    uint32_t sampleRate;
     Voice_t voices[VOICES_LENGTH];
-    float volume;
+    fix16 volume;
+
     bool filterEnabled;
     float filterCutoff;
     float filterResonance;
-    float attack;
-    float decay;
-    float sustain;
-    float release;
+
     bool triggerAttack;
-    float envelope;
+    fix16 envelope;
+    fix16 attack;
+    fix16 decay;
+    fix16 sustain;
+    fix16 release;
 } AudioContext_t;
+
+static void synth_audiocontext_set_wavetable_stride(Voice_t* voice, uint32_t sampleRate) {
+    voice->wavetableStride = float2fix16(voice->frequency * voice->detune / sampleRate);
+}
 
 #endif

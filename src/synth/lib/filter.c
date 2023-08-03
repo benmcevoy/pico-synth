@@ -2,7 +2,7 @@
 
 #include <math.h>
 
-static float _sampleRate = 0.f;
+static uint32_t _sampleRate = 0;
 static float n1, n2, o1, o2, b0, b1, b2, a1, a2 = 0;
 
 // Calculate the filter coefficients based on the given parameters
@@ -32,7 +32,7 @@ float synth_filter_low_pass(float sample) {
     return o;
 }
 
-void synth_filter_init(float sampleRate, float cutOffFrequency,
+void synth_filter_init(uint32_t sampleRate, float cutOffFrequency,
                        float resonance) {
     _sampleRate = sampleRate;
     synth_filter_calculate_coefficients(cutOffFrequency, resonance);

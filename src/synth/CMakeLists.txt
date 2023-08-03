@@ -22,5 +22,10 @@ target_include_directories(${projectName} PUBLIC
 # pull in common dependencies
 target_link_libraries(${projectName} PUBLIC pico_stdlib hardware_pwm hardware_dma tinyusb_device tinyusb_board pico_unique_id)
 
+# allow stable overclock - set SPI flash clock divider - necessary over 300MHz 
+#pico_define_boot_stage2(${projectName} ${PICO_DEFAULT_BOOT_STAGE2_FILE})
+#target_compile_definitions(${projectName} PRIVATE PICO_FLASH_SPI_CLKDIV=4)
+#pico_set_boot_stage2(${projectName})
+
 # create map/bin/hex/uf2 file etc.
 pico_add_extra_outputs(${projectName})

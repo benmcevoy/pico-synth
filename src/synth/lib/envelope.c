@@ -1,23 +1,28 @@
 #include "../include/envelope.h"
 
-static float _sampleRate = 0.f;
-static EnvelopeState_t envelopeState = OFF;
-static uint32_t envelopeCounter = 0;
-static uint32_t envelopeDuration = 0;
-static float envelopeStart = 0.f;
+static fix16 _sampleRate = 0;
+static int SR_FACTOR = 4;
+static EnvelopeState_t _envelopeState = OFF;
+static fix16 _time = 0;
+static fix16 _duration = 0;
+static fix16 _envelopeStart = 0;
 
-static float elapsed(float time, float duration) {
-    return (duration - time) / duration;
+fix16 to_duration(fix16 value) {
+    return multfix16(value, _sampleRate) << SR_FACTOR;
 }
 
-static bool has_elapsed(float time, float duration) {
-    return elapsed(time, duration) >= 1.f;
+static fix16 elapsed(fix16 time, fix16 duration) {
+    return divfix16((duration - time), duration);
 }
 
-static float linear_easing(float time, float duration, float start, float end) {
+static bool has_elapsed(fix16 time, fix16 duration) {
+    return elapsed(time, duration) >= FIX16_UNIT;
+}
+
+static fix16 linear_easing(fix16 time, fix16 duration, fix16 start, fix16 end) {
     return has_elapsed(time, duration)
                ? end
-               : start + elapsed(time, duration) * (end - start);
+               : start + multfix16(elapsed(time, duration), (end - start));
 }
 
 void synth_envelope_note_on(AudioContext_t* context) {
@@ -28,63 +33,71 @@ void synth_envelope_note_off(AudioContext_t* context) {
     context->triggerAttack = false;
 }
 
-float synth_envelope_process(AudioContext_t* context) {
+fix16 synth_envelope_process(AudioContext_t* context) {
     if (context->triggerAttack &&
-        (envelopeState == OFF || envelopeState == RELEASE)) {
-        envelopeDuration = context->attack * _sampleRate;
-        envelopeCounter = envelopeDuration;
-        envelopeState = ATTACK;
-        envelopeStart = context->envelope;
+        (_envelopeState == OFF || _envelopeState == RELEASE)) {
+        _duration = to_duration(context->attack);
+        _time = _duration;
+        _envelopeState = ATTACK;
+        _envelopeStart = context->envelope;
     }
 
     if (!context->triggerAttack &&
-        (envelopeState == ATTACK || envelopeState == DECAY ||
-         envelopeState == SUSTAIN)) {
-        envelopeDuration = context->release * _sampleRate;
-        envelopeCounter = envelopeDuration;
-        envelopeState = RELEASE;
-        envelopeStart = context->envelope;
+        (_envelopeState == ATTACK || _envelopeState == DECAY ||
+         _envelopeState == SUSTAIN)) {
+        _duration = to_duration(context->release);
+        _time = _duration;
+        _envelopeState = RELEASE;
+        _envelopeStart = context->envelope;
     }
 
-    switch (envelopeState) {
+    switch (_envelopeState) {
         case OFF:
-            return 0.f;
+            return 0;
 
         case ATTACK:
-            if (envelopeCounter == 0) {
-                envelopeDuration = context->decay * _sampleRate;
-                envelopeCounter = envelopeDuration;
-                envelopeState = DECAY;
-                return 1.f;
+            if (_time == 0) {
+                _duration = to_duration(context->decay);
+                _time = _duration;
+                _envelopeState = DECAY;
+                return FIX16_UNIT;
             }
 
-            return linear_easing(envelopeCounter--, envelopeDuration,
-                                 envelopeStart, 1.f);
+            _time = _time - FIX16_UNIT;
+
+            return linear_easing(_time, _duration, _envelopeStart, FIX16_UNIT);
 
         case DECAY:
-            if (envelopeCounter == 0) {
-                envelopeState = SUSTAIN;
+            if (_time == 0) {
+                _envelopeState = SUSTAIN;
                 return context->sustain;
             }
 
-            return linear_easing(envelopeCounter--, envelopeDuration, 1.f,
+            _time = _time - FIX16_UNIT;
+
+            return linear_easing(_time, _duration, FIX16_UNIT,
                                  context->sustain);
 
         case SUSTAIN:
             return context->sustain;
 
         case RELEASE:
-            if (envelopeCounter == 0) {
-                envelopeState = OFF;
-                return 0.f;
+            if (_time == 0) {
+                _envelopeState = OFF;
+                return 0;
             }
 
-            return linear_easing(envelopeCounter--, envelopeDuration,
-                                 envelopeStart, 0.f);
+            _time = _time - FIX16_UNIT;
+
+            return linear_easing(_time, _duration, _envelopeStart, 0);
 
         default:
-            return 0.f;
+            return 0;
     }
 }
 
-void synth_envelope_init(float sampleRate) { _sampleRate = sampleRate; }
+void synth_envelope_init(uint32_t sampleRate) {
+    // assume max sample rate of 250kHz
+    // will not fit in fix16, so divide by 4
+    _sampleRate = int2fix16((uint16_t)sampleRate >> SR_FACTOR);
+}

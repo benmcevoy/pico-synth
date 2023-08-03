@@ -37,6 +37,7 @@
         "filter.h": "c",
         "tusb.h": "c",
         "audio_pwm.h": "c",
-        "noise.h": "c"
+        "noise.h": "c",
+        "audio_i2s.h": "c"
     }
 }

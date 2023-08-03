@@ -8,6 +8,7 @@
 #include "include/audiocontext.h"
 #include "include/envelope.h"
 #include "include/filter.h"
+#include "include/fixedpoint.h"
 #include "include/ledblink.h"
 #include "include/midi.h"
 #include "include/pitchtable.h"
@@ -19,48 +20,57 @@
 
 #define PIN 26
 
-static float clk_div = 20.f;
-
-static unsigned short _buffer0[BUFFER_LENGTH] = {0};
-static unsigned short _buffer1[BUFFER_LENGTH] = {0};
+static float clk_div = 10.f;
+static uint16_t _buffer0[BUFFER_LENGTH] = {0};
+static uint16_t _buffer1[BUFFER_LENGTH] = {0};
 static bool _swap = false;
 static int _pwmDmaChannel;
 static AudioContext_t* _context;
+static const fix16 MIXFACTOR = VOICES_LENGTH * FIX16_UNIT;
 
 static void fill_write_buffer() {
     for (int i = 0; i < BUFFER_LENGTH; i++) {
-        float mix = 0.f;
+        fix16 mix = 0;
 
         for (int v = 0; v < VOICES_LENGTH; v++) {
             Voice_t* voice = &_context->voices[v];
 
-            float sample = synth_waveform_sample(voice);
+            fix16 sample = synth_waveform_sample(voice);
 
-            // mix - average
-            // TODO: this is naive?
             mix += sample;
         }
 
-        // average
-        mix /= (float)VOICES_LENGTH;
+        mix = divfix16(mix, MIXFACTOR);
 
-        if (_context->filterEnabled) mix = synth_filter_low_pass(mix);
-
-        // scale to 8 bit in a 16-bit container
-        unsigned short out = (mix + 1.f) * 127.f;
+        // if (_context->filterEnabled) mix = synth_filter_low_pass(mix);
 
         // envelope modulation
-        float envelope = synth_envelope_process(_context);
+        fix16 envelope = synth_envelope_process(_context);
+
+        // scale to an 8 bit volume in a 16-bit container 
+
+        // get amplitude - this is still in the range -1..1 (as a fix16) so add one to it 
+        // so now is 0..2, it's never exactly 2... as far as we care
+        fix16 amplitude = multfix16(multfix16(envelope, mix), _context->volume) + FIX16_UNIT;
+        
+        // scale to 8 bits by shifting >> 9  and then cast to uint16
+        // shifting by 9 moves the first whole number (at bit 16), which is a zero or a one 
+        // into the lower byte
+
+        uint16_t out = (uint16_t)(amplitude >> 9);
+
+        // and that was confusing...
 
         // final volume
         _context->envelope = envelope;
-        _context->audioOut[i] = out * envelope * _context->volume;
+        _context->audioOut[i] = out;
         _context->samplesElapsed++;
     }
 }
 
 static void __isr __time_critical_func(dma_irq_handler)() {
     // cycle buffers
+    _context->audioOut = _swap ? _buffer0 : _buffer1;
     _swap = !_swap;
 
     // ack irq
@@ -68,9 +78,6 @@ static void __isr __time_critical_func(dma_irq_handler)() {
     // restart DMA
     dma_channel_transfer_from_buffer_now(
         _pwmDmaChannel, _swap ? _buffer0 : _buffer1, BUFFER_LENGTH);
-
-    // fill write buffer
-    _context->audioOut = _swap ? _buffer1 : _buffer0;
 
     fill_write_buffer();
 }
@@ -82,30 +89,23 @@ static void synth_audio_context_init(float clk_div) {
 
     _context = malloc(sizeof(AudioContext_t));
 
-    _context->sampleRate = systemClockHz / (float)(clk_div * 255);
+    _context->sampleRate = systemClockHz / (clk_div * 255);
     _context->samplesElapsed = 0;
-    _context->volume = 0.3;
-    _context->filterEnabled = true;
-    _context->filterCutoff = 1000.f;
-    _context->filterResonance = 1.f;
-    _context->attack = 0.05;
-    _context->decay = 0.05;
-    _context->sustain = 1.f;
-    _context->release = 0.5f;
-    
-    _context->voices[0].frequency = 440;
-    _context->voices[0].waveform = SAW;
-    _context->voices[0].detune = 1.f;
-    _context->voices[0].wavetableStride = _context->voices[0].frequency *
-                                          _context->voices[0].detune /
-                                          _context->sampleRate;
+    _context->volume = float2fix16(0.3);
+    _context->filterEnabled = false;
+    _context->filterCutoff = 500.f;
+    _context->filterResonance = 0.7f;
+    _context->attack = float2fix16(0.05);
+    _context->decay = float2fix16(0.05f);
+    _context->sustain = float2fix16(0.5f);
+    _context->release = float2fix16(0.5f);
 
-    _context->voices[1].frequency = 440;
-    _context->voices[1].waveform = SQUARE;
-    _context->voices[1].detune = 1.01f;
-    _context->voices[1].wavetableStride = _context->voices[1].frequency *
-                                          _context->voices[1].detune /
-                                          _context->sampleRate;
+    for (int v = 0; v < VOICES_LENGTH; v++) {
+        _context->voices[v].frequency = PITCH_C3;
+        _context->voices[v].waveform = SQUARE;
+        _context->voices[v].detune = 1.f;
+        synth_audiocontext_set_wavetable_stride(&_context->voices[v], _context->sampleRate);
+    }
 }
 
 static uint synth_pwm_init(float clk_div) {
@@ -152,31 +152,34 @@ static void synth_dma_init(uint slice) {
 }
 
 int main() {
+    set_sys_clock_khz(240000, true);
+
     stdio_init_all();
 
-    printf("Synth starting.\n");
+    printf("\n----------------------\nSynth starting.\n");
     sleep_ms(100);
 
     synth_audio_context_init(clk_div);
-    synth_waveform_init(_context->sampleRate);
     synth_envelope_init(_context->sampleRate);
     synth_filter_init(_context->sampleRate, _context->filterCutoff,
                       _context->filterResonance);
     synth_midi_init(_context->sampleRate);
-
+synth_waveform_init();
     uint slice = synth_pwm_init(clk_div);
     synth_dma_init(slice);
-    board_init();
+    // board_init();
 
     // init device stack on configured roothub port
-    tud_init(BOARD_TUD_RHPORT);
+    // tud_init(BOARD_TUD_RHPORT);
+
+    printf("SampleRate: %d\n", _context->sampleRate);
 
     while (true) {
-        // synth_play_test(_context);
+        synth_test_play(_context);
 
-        tud_task();  // tinyusb device task
-        synth_led_blink_task();
-        synth_midi_task(_context);
+        // tud_task();  // tinyusb device task
+        // synth_led_blink_task();
+        // synth_midi_task(_context);
     }
 }
 

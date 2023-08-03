@@ -5,9 +5,10 @@
 
 #include "include/envelope.h"
 #include "include/filter.h"
+#include "include/fixedpoint.h"
 #include "tusb.h"
 
-static float _sampleRate;
+static uint32_t _sampleRate = 0;
 static float _maxFilterCutoff;
 static float _notePriority[12] = {0};
 static uint8_t _notePriorityIndex = 0;
@@ -26,8 +27,7 @@ static void note_on(AudioContext_t* context, uint8_t note, uint8_t velocity) {
         Voice_t* voice = &context->voices[i];
 
         voice->frequency = pitch;
-        voice->wavetableStride =
-            (voice->frequency * voice->detune) / _sampleRate;
+        synth_audiocontext_set_wavetable_stride(voice, _sampleRate);
     }
 
     synth_envelope_note_on(context);
@@ -54,8 +54,7 @@ static void note_off(AudioContext_t* context) {
         Voice_t* voice = &context->voices[i];
 
         voice->frequency = priorPitch;
-        voice->wavetableStride =
-            (voice->frequency * voice->detune) / _sampleRate;
+        synth_audiocontext_set_wavetable_stride(voice, _sampleRate);
     }
 }
 
@@ -78,18 +77,20 @@ void control_change(AudioContext_t* context, uint8_t command,
                                                 context->filterResonance);
             break;
         }
-        case SYNTH_MIDI_CC_VOLUME:
-            context->volume = (float)parameter / 128.f;
+        case SYNTH_MIDI_CC_VOLUME: {
+            // TODO: need to test this not sure I got that right
+            fix16 volume = int2fix16(parameter) >> 8;
+            context->volume = volume;  //(float)parameter / 128.f;
             break;
+        }
 
         case SYNTH_MIDI_CC_MODWHEEL: {
-            // TODO: detune is really a log parameter, so it drops off to zero pretty cra cra
+            // TODO: detune is really a log parameter, so it drops off to zero
+            // pretty cra cra
             float detune = (float)parameter / 64.f;
 
             context->voices[1].detune = detune;
-            context->voices[1].wavetableStride =
-                (context->voices[1].frequency * context->voices[1].detune) /
-                _sampleRate;
+            synth_audiocontext_set_wavetable_stride(&context->voices[1], _sampleRate);
             break;
         }
         default:
@@ -126,7 +127,7 @@ void synth_midi_task(AudioContext_t* context) {
     }
 }
 
-void synth_midi_init(float sampleRate) {
+void synth_midi_init(uint32_t sampleRate) {
     _sampleRate = sampleRate;
     _maxFilterCutoff = 2000.f;
 }

@@ -6,8 +6,6 @@ DONE - add a reset button pin 30 short to ground
 
 ## DONE - toolchain
 
-
-
 installed mostly as per 
 
 `https://raw.githubusercontent.com/raspberrypi/pico-setup/master/pico_setup.sh`
@@ -1063,6 +1061,69 @@ This would mimic (I think!) what happens on the NES/C64.
 
 This is apparantly just called periodic random noise or just pseudo random noise.
 
+I've put this on the back burner for now.  This is what I had but simplified for the time being to just the prng method.
+
+```c
+#ifndef SYNTH_NOISE_
+#define SYNTH_NOISE_
+
+#include <stdlib.h>
+
+#include "pico/stdlib.h"
+
+static uint16_t _seed = 17;
+static int a = 1;
+static int b = 5;
+static int c = 2;
+
+// https://en.wikipedia.org/wiki/Xorshift
+float synth_noise_next_prng() {
+    _seed ^= (_seed << a);
+    _seed ^= (_seed >> b);
+    _seed ^= (_seed << c);
+    // 16 bit PRNG scaled to -1..1
+    return _seed / 32768.f - 1.f;
+}
+
+float synth_noise_next_random() {
+    return (rand() / (float)(RAND_MAX)) * 2.f - 1.f;
+}
+
+/* Test a bit. Returns 1 if bit is set. */
+static bool bit(long val, uint8_t bitnr) {
+    return (val & (1 << bitnr)) ? 1 : 0;
+}
+
+// http://www.sidmusic.org/sid/sidtech5.html
+static uint32_t reg = 0x7ffff8; /* Initial value of internal register*/
+static uint8_t output;
+static bool bit22; /* Temp. to keep bit 22 */
+static bool bit17; /* Temp. to keep bit 17 */
+
+/* Generate output from noise-waveform */
+float synth_noise_next_c64() {
+    /* Pick out bits to make output value */
+    output = (bit(reg, 22) << 7) | (bit(reg, 20) << 6) | (bit(reg, 16) << 5) |
+             (bit(reg, 13) << 4) | (bit(reg, 11) << 3) | (bit(reg, 7) << 2) |
+             (bit(reg, 4) << 1) | (bit(reg, 2) << 0);
+
+    /* Save bits used to feed bit 0 */
+    bit22 = bit(reg, 22);
+    bit17 = bit(reg, 17);
+
+    /* Shift 1 bit left */
+    reg = reg << 1;
+
+    /* Feed bit 0 */
+    reg = reg | (bit22 ^ bit17);
+
+    // scale 8 bit number to -1..1
+    return output / 128.f - 1.f;
+}
+
+#endif
+```
+
 
 ## Settling on an instrument design
 
@@ -1124,4 +1185,80 @@ um? up down random
 how to program?  hold down many keys?  use a chord table?
 
 ## Echo echo echo
+
+
+## Fixed point
+
+After watching a few youtube videos I have manged to start moving this to a fixed 16.16 value.
+
+Slowly getting rid of floats...
+
+There is AFAIK a hardware integer divider so we should be OK.
+
+
+## Populating wavetable
+
+as I keep forgetting...
+
+
+```c
+    static fix14 waveTable[WAVE_TABLE_LENGTH] = {0};
+
+    // sine
+    for(int i = 0; i < WAVE_TABLE_LENGTH; i ++){
+        waveTable[i] = float2fix14(sin(TWO_PI * (float)i / (float)WAVE_TABLE_LENGTH));
+        printf("%d, ",  (waveTable[i]) );
+    }
+
+    // triangle
+    for(int i = 0; i < WAVE_TABLE_LENGTH/2; i ++){
+        waveTable[i] = float2fix14(-1.0 + 4.0 * (float)(i)/(float)WAVE_TABLE_LENGTH);
+        printf("%d, ",  (waveTable[i]) );
+    }
+     
+    for(int i = WAVE_TABLE_LENGTH/2; i < WAVE_TABLE_LENGTH; i ++){
+        waveTable[i] = float2fix14(1.0 - 4.0 * (float)(i - WAVE_TABLE_LENGTH/2)/(float)WAVE_TABLE_LENGTH);
+        printf("%d, ",  (waveTable[i]) );
+    }
+
+    // saw
+    for(int i = 0; i < WAVE_TABLE_LENGTH; i ++){
+        waveTable[i] = float2fix14(
+            0.5 * sin(1.0 * TWO_PI * (float)i/(float)WAVE_TABLE_LENGTH) +
+            0.25 * sin(2.0 * TWO_PI * (float)i/(float)WAVE_TABLE_LENGTH) +
+            0.125 * sin(3.0 * TWO_PI * (float)i/(float)WAVE_TABLE_LENGTH) +
+            0.0625 * sin(4.0 * TWO_PI * (float)i/(float)WAVE_TABLE_LENGTH) 
+            // and add more harmonics as you wish
+         
+        );
+        printf("%d, ",  (waveTable[i]) );
+    }
+```
+
+I found life is easier if I just one representation for every thing, envelope, waveform, etc, e.g. fix16.
+
+## Overclocking
+
+Use ` set_sys_clock_khz(240000, true);` 
+
+Do this before `stdio_init_all();`  or you must call `setup_default_uart()` afterwards.
+
+Not all clock frequencies work - there is a python script in the sdk:  `python3 vcocalc.py 240`
+
+`/pico-sdk/src/rp2_common/hardware_clocks/scripts$ python3 vcocalc.py 240`
+
+```sh
+Requested: 240.0 MHz
+Achieved: 240.0 MHz
+REFDIV: 1
+FBDIV: 120 (VCO = 1440.0 MHz)
+PD1: 6
+PD2: 1
+```
+
+give it a clock in MHz and convert to the result to kHz.
+
+The flash memory becomes unstable over 300MHz.  There are some cmake settings you can use to set the SPI clock divider.  I did not try too hard.
+
+
 
