@@ -7,7 +7,7 @@
 #include "include/fixedpoint.h"
 #include "tusb.h"
 
-static uint32_t _sampleRate = 0;
+static uint16_t _sampleRate = 0;
 static float _notePriority[12] = {0};
 static uint8_t _notePriorityIndex = 0;
 
@@ -16,10 +16,12 @@ float synth_midi_frequency_from_midi_note(uint8_t note) {
 }
 
 static void note_on(AudioContext_t* context, uint8_t note, uint8_t velocity) {
-    float sustain = (float)velocity / 128.f;
+    fix16 sustain = velocity << 9;
     float pitch = synth_midi_frequency_from_midi_note(note);
 
     context->sustain = sustain;
+
+    printf("sus: %d", sustain);
 
     for (int i = 0; i < VOICES_LENGTH; i++) {
         Voice_t* voice = &context->voices[i];
@@ -60,9 +62,9 @@ void control_change(AudioContext_t* context, uint8_t command,
                     uint8_t parameter) {
     switch (command) {
         case SYNTH_MIDI_CC_VOLUME: {
-            // TODO: need to test this not sure I got that right
-            fix16 volume = int2fix16(parameter) >> 8;
-            context->volume = volume;  //(float)parameter / 128.f;
+            // 7 bit number needs to end up in bits 9-15
+            fix16 volume = parameter << 9;
+            context->volume = volume;  
             break;
         }
 
@@ -71,6 +73,7 @@ void control_change(AudioContext_t* context, uint8_t command,
             // pretty cra cra
             float detune = (float)parameter / 64.f;
 
+            // TODO:  this can cuase some memory issues if VOICE_LENGTH < 2
             context->voices[1].detune = detune;
             synth_audiocontext_set_wavetable_stride(&context->voices[1], _sampleRate);
             break;
@@ -109,6 +112,6 @@ void synth_midi_task(AudioContext_t* context) {
     }
 }
 
-void synth_midi_init(uint32_t sampleRate) {
+void synth_midi_init(uint16_t sampleRate) {
     _sampleRate = sampleRate;
 }

@@ -30,6 +30,6 @@ float synth_midi_frequency_from_midi_note(uint8_t note);
 
 void synth_midi_task(AudioContext_t* context);
 
-void synth_midi_init(uint32_t sampleRate);
+void synth_midi_init(uint16_t sampleRate);
 
 #endif

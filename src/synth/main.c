@@ -22,7 +22,7 @@
 // uncomment to use midi or comment out for the test code
 #define USE_MIDI
 
-static float clk_div = 3.f;
+static uint16_t _sampleRate = 44100;
 static uint16_t _buffer0[BUFFER_LENGTH] = {0};
 static uint16_t _buffer1[BUFFER_LENGTH] = {0};
 static bool _swap = false;
@@ -48,16 +48,17 @@ static void fill_write_buffer() {
         fix16 envelope = synth_envelope_process(_context);
 
         // scale to an 8 bit volume in a 16-bit container
+        // the mix value is between -1..1
+        // add 1 to move it 0..2
+        mix = mix + FIX16_UNIT;
 
-        // get amplitude - this is still in the range -1..1 (as a fix16) so add
-        // one to it so now is 0..2, it's never exactly 2... as far as we care
-        fix16 amplitude =
-            multfix16(multfix16(envelope, mix), _context->volume) + FIX16_UNIT;
+        // apply envelope and master volume
+        fix16 amplitude = multfix16(multfix16(_context->volume, envelope), mix);
 
+        // we should now have a number between 0..2 (or really 0..1.99999999999 etc)
         // scale to 8 bits by shifting >> 9  and then cast to uint16
         // shifting by 9 moves the first whole number (at bit 16), which is a
-        // zero or a one into the lower byte
-
+        // zero or a one into the lower byte at bit 7
         uint16_t out = (uint16_t)(amplitude >> 9);
 
         // and that was confusing...
@@ -83,16 +84,12 @@ static void __isr __time_critical_func(dma_irq_handler)() {
     fill_write_buffer();
 }
 
-static void synth_audio_context_init(float clk_div) {
-    // derive sample rate
-    uint systemClockHz =
-        frequency_count_khz(CLOCKS_FC0_SRC_VALUE_CLK_SYS) * 1000;
-
+static void synth_audio_context_init(uint16_t sampleRate) {
     _context = malloc(sizeof(AudioContext_t));
 
-    _context->sampleRate = systemClockHz / (clk_div * 255);
+    _context->sampleRate = sampleRate;
     _context->samplesElapsed = 0;
-    _context->volume = float2fix16(0.3);
+    _context->volume = float2fix16(1);
     _context->attack = float2fix16(0.05);
     _context->decay = float2fix16(0.05f);
     _context->sustain = float2fix16(0.5f);
@@ -100,14 +97,22 @@ static void synth_audio_context_init(float clk_div) {
 
     for (int v = 0; v < VOICES_LENGTH; v++) {
         _context->voices[v].frequency = PITCH_C3;
-        _context->voices[v].waveform = SQUARE;
+        _context->voices[v].waveform = TRIANGLE;
         _context->voices[v].detune = 1.f + v * 0.01;
         synth_audiocontext_set_wavetable_stride(&_context->voices[v],
                                                 _context->sampleRate);
     }
 }
 
-static uint synth_pwm_init(float clk_div) {
+static uint synth_pwm_init(uint16_t sampleRate) {
+    // derive clk_div and wrap
+    // set clk_div =1
+    uint systemClockHz =
+        frequency_count_khz(CLOCKS_FC0_SRC_VALUE_CLK_SYS) * 1000;
+
+    uint16_t wrap = systemClockHz / sampleRate;
+    printf("wrap: %hu\n", wrap);
+
     // setup pwm
     gpio_set_function(PIN, GPIO_FUNC_PWM);
     gpio_set_function(PIN + 1, GPIO_FUNC_PWM);
@@ -117,8 +122,8 @@ static uint synth_pwm_init(float clk_div) {
     // set sample rate/clock to 125Mhz / wrap+1 / div =   ~22kHz
     // rp2040 datasheet gives the actual formula
 
-    pwm_config_set_clkdiv(&pwmConfig, clk_div);
-    pwm_config_set_wrap(&pwmConfig, 254);
+    pwm_config_set_clkdiv(&pwmConfig, 1);
+    pwm_config_set_wrap(&pwmConfig, wrap);
     // pwm_config_set_phase_correct(&pwmConfig, true);
     pwm_init(slice, &pwmConfig, true);
 
@@ -158,11 +163,11 @@ int main() {
     printf("\n----------------------\nSynth starting.\n");
     sleep_ms(100);
 
-    synth_audio_context_init(clk_div);
-    synth_envelope_init(_context->sampleRate);
-    synth_midi_init(_context->sampleRate);
+    synth_audio_context_init(_sampleRate);
+    synth_envelope_init(_sampleRate);
+    synth_midi_init(_sampleRate);
     synth_waveform_init();
-    uint slice = synth_pwm_init(clk_div);
+    uint slice = synth_pwm_init(_sampleRate);
     synth_dma_init(slice);
 
     printf("SampleRate: %d\n", _context->sampleRate);

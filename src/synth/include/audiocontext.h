@@ -7,7 +7,7 @@
 #include "pico/stdlib.h"
 
 #define BUFFER_LENGTH 512
-#define VOICES_LENGTH 2
+#define VOICES_LENGTH 3
 
 typedef enum Waveform { SINE = 0, SQUARE, SAW, TRIANGLE, NOISE } Waveform_t;
 typedef enum EnvelopeState {
@@ -19,6 +19,7 @@ typedef enum EnvelopeState {
 } EnvelopeState_t;
 
 typedef struct Voice {
+    // TODO: remove floats
     float detune;
     float frequency;
     Waveform_t waveform;
@@ -30,7 +31,7 @@ typedef struct Voice {
 typedef struct AudioContext {
     uint16_t* audioOut;
     size_t samplesElapsed;
-    uint32_t sampleRate;
+    uint16_t sampleRate;
     Voice_t voices[VOICES_LENGTH];
     fix16 volume;
 
@@ -42,7 +43,7 @@ typedef struct AudioContext {
     fix16 release;
 } AudioContext_t;
 
-static void synth_audiocontext_set_wavetable_stride(Voice_t* voice, uint32_t sampleRate) {
+static void synth_audiocontext_set_wavetable_stride(Voice_t* voice, uint16_t sampleRate) {
     voice->wavetableStride = float2fix16(voice->frequency * voice->detune / sampleRate);
 }
 
