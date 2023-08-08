@@ -54,10 +54,10 @@ static void fill_write_buffer() {
             multfix16(synth_circularbuffer_read(),
                       _context->delayGain);
 
+        synth_circularbuffer_write(feedback, _context->delay);
+
         // limits to -1..1 with a nice curve, nicer mixing
         feedback = float2fix16(tanhf(fix2float16(feedback)));
-
-        synth_circularbuffer_write(feedback, _context->delay);
 
         // apply master volume
         amplitude = multfix16(_context->volume, feedback);
@@ -105,12 +105,12 @@ static void synth_audio_context_init(uint16_t sampleRate) {
     _context->sustain = float2fix16(0.5f);
     _context->release = float2fix16(0.5f);
     _context->delay = 0;
-    _context->delayGain = float2fix16(0.5f);
+    _context->delayGain = 0;
 
     for (int v = 0; v < VOICES_LENGTH; v++) {
         _context->voices[v].frequency = PITCH_C3;
-        _context->voices[v].waveform = SINE;
-        _context->voices[v].detune = 1.f + v * 0.01;
+        _context->voices[v].waveform = SAW;
+        _context->voices[v].detune = 1.f + v * 0.0;
         synth_audiocontext_set_wavetable_stride(&_context->voices[v],
                                                 _context->sampleRate);
     }

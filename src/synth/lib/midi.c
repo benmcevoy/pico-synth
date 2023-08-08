@@ -8,7 +8,7 @@
 #include "tusb.h"
 
 static uint16_t _sampleRate = 0;
-static float _notePriority[12] = {0};
+static uint8_t _notePriority[128] = {0};
 static uint8_t _notePriorityIndex = 0;
 
 float synth_midi_frequency_from_midi_note(uint8_t note) {
@@ -21,8 +21,6 @@ static void note_on(AudioContext_t* context, uint8_t note, uint8_t velocity) {
 
     context->sustain = sustain;
 
-    printf("sus: %d", sustain);
-
     for (int i = 0; i < VOICES_LENGTH; i++) {
         Voice_t* voice = &context->voices[i];
 
@@ -32,28 +30,36 @@ static void note_on(AudioContext_t* context, uint8_t note, uint8_t velocity) {
 
     synth_envelope_note_on(context);
 
-    if (_notePriorityIndex < 11) _notePriorityIndex++;
+    _notePriority[_notePriorityIndex] = note;
 
-    _notePriority[_notePriorityIndex] = pitch;
+    if (_notePriorityIndex < 126) _notePriorityIndex++;
 }
 
-static void note_off(AudioContext_t* context) {
-    float priorPitch = 0.f;
+static void note_off(AudioContext_t* context, uint8_t note) {
+    bool found = false;
+
+    // most recent note priority
+    for (int i = 0; i < _notePriorityIndex; i++) {
+        if (_notePriority[i] == note || found) {
+            found = true;
+            _notePriority[i] = _notePriority[i + 1];
+        }
+    }
 
     if (_notePriorityIndex > 0) _notePriorityIndex--;
 
-    priorPitch = _notePriority[_notePriorityIndex];
-    _notePriority[_notePriorityIndex] = 0;
-
-    if (priorPitch == 0.f) {
+    if (_notePriorityIndex == 0) {
         synth_envelope_note_off(context);
         return;
     }
 
+    note = _notePriority[_notePriorityIndex - 1];
+    float pitch = synth_midi_frequency_from_midi_note(note);
+
     for (int i = 0; i < VOICES_LENGTH; i++) {
         Voice_t* voice = &context->voices[i];
 
-        voice->frequency = priorPitch;
+        voice->frequency = pitch;
         synth_audiocontext_set_wavetable_stride(voice, _sampleRate);
     }
 }
@@ -102,14 +108,15 @@ static void process_midi_command(AudioContext_t* context, uint8_t packet[4]) {
 
     //    if (channel >= VOICES_LENGTH) return;
 
-    //printf("midi: %d %d %d %d %d\n", command, packet[0], packet[1], packet[2], packet[3]);
+    // printf("midi: %d %d %d %d %d\n", command, packet[0], packet[1],
+    // packet[2], packet[3]);
 
     switch (command) {
         case SYNTH_MIDI_NOTEON:
             note_on(context, packet[2], packet[3]);
             break;
         case SYNTH_MIDI_NOTEOFF:
-            note_off(context);
+            note_off(context, packet[2]);
             break;
         case SYNTH_MIDI_CC:
             control_change(context, packet[2], packet[3]);
