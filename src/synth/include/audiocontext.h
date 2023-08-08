@@ -35,6 +35,9 @@ typedef struct AudioContext {
     Voice_t voices[VOICES_LENGTH];
     fix16 volume;
 
+    uint16_t delay;
+    fix16 delayGain;
+
     bool triggerAttack;
     fix16 envelope;
     fix16 attack;

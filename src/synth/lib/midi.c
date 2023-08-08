@@ -64,7 +64,19 @@ void control_change(AudioContext_t* context, uint8_t command,
         case SYNTH_MIDI_CC_VOLUME: {
             // 7 bit number needs to end up in bits 9-15
             fix16 volume = parameter << 9;
-            context->volume = volume;  
+            context->volume = volume;
+            break;
+        }
+
+        case SYNTH_MIDI_CC_CUTOFF: {
+            fix16 value = parameter << 9;
+            context->delayGain = value;
+            break;
+        }
+
+        case SYNTH_MIDI_CC_RESONANCE: {
+            uint16_t value = _sampleRate * parameter / 128.f;
+            context->delay = value;
             break;
         }
 
@@ -75,7 +87,8 @@ void control_change(AudioContext_t* context, uint8_t command,
 
             // TODO:  this can cuase some memory issues if VOICE_LENGTH < 2
             context->voices[1].detune = detune;
-            synth_audiocontext_set_wavetable_stride(&context->voices[1], _sampleRate);
+            synth_audiocontext_set_wavetable_stride(&context->voices[1],
+                                                    _sampleRate);
             break;
         }
         default:
@@ -89,7 +102,7 @@ static void process_midi_command(AudioContext_t* context, uint8_t packet[4]) {
 
     //    if (channel >= VOICES_LENGTH) return;
 
-    printf("midi: %d %d %d\n", command, packet[2], packet[3]);
+    //printf("midi: %d %d %d %d %d\n", command, packet[0], packet[1], packet[2], packet[3]);
 
     switch (command) {
         case SYNTH_MIDI_NOTEON:
@@ -97,6 +110,7 @@ static void process_midi_command(AudioContext_t* context, uint8_t packet[4]) {
             break;
         case SYNTH_MIDI_NOTEOFF:
             note_off(context);
+            break;
         case SYNTH_MIDI_CC:
             control_change(context, packet[2], packet[3]);
             break;
@@ -112,6 +126,4 @@ void synth_midi_task(AudioContext_t* context) {
     }
 }
 
-void synth_midi_init(uint16_t sampleRate) {
-    _sampleRate = sampleRate;
-}
+void synth_midi_init(uint16_t sampleRate) { _sampleRate = sampleRate; }

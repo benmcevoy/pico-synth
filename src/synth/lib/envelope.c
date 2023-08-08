@@ -9,7 +9,6 @@ static EnvelopeState_t _envelopeState = OFF;
 static fix16 _remaining = 0;
 static fix16 _duration = 0;
 static fix16 _envelopeStart = 0;
-static fix16 _zeroThreshold = 1000;
 
 fix16 to_duration(fix16 value) {
     return multfix16(value, _sampleRate) << SR_SCALE_FACTOR;
@@ -61,7 +60,7 @@ fix16 synth_envelope_process(AudioContext_t* context) {
             return 0;
 
         case ATTACK:
-            if (_remaining <= _zeroThreshold) {
+            if (_remaining <= EPSILON) {
                 _duration = to_duration(context->decay);
                 _remaining = _duration;
                 _envelopeState = DECAY;
@@ -74,7 +73,7 @@ fix16 synth_envelope_process(AudioContext_t* context) {
                                  FIX16_UNIT);
 
         case DECAY:
-            if (_remaining <= _zeroThreshold) {
+            if (_remaining <= EPSILON) {
                 _envelopeState = SUSTAIN;
                 return context->sustain;
             }
@@ -88,7 +87,7 @@ fix16 synth_envelope_process(AudioContext_t* context) {
             return context->sustain;
 
         case RELEASE:
-            if (_remaining <= _zeroThreshold) {
+            if (_remaining <= EPSILON) {
                 _envelopeState = OFF;
                 return 0;
             }

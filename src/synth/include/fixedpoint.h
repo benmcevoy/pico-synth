@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+#define EPSILON 8
+
 #define FIX16_UNIT 65536
 #define FIX30_UNIT 1073741824
 

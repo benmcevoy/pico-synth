@@ -6,6 +6,7 @@
 #include "hardware/dma.h"
 #include "hardware/pwm.h"
 #include "include/audiocontext.h"
+#include "include/circularbuffer.h"
 #include "include/envelope.h"
 #include "include/fixedpoint.h"
 #include "include/ledblink.h"
@@ -22,7 +23,7 @@
 // uncomment to use midi or comment out for the test code
 #define USE_MIDI
 
-static uint16_t _sampleRate = 44100;
+static uint16_t _sampleRate = 48000;
 static uint16_t _buffer0[BUFFER_LENGTH] = {0};
 static uint16_t _buffer1[BUFFER_LENGTH] = {0};
 static bool _swap = false;
@@ -42,26 +43,35 @@ static void fill_write_buffer() {
             mix += sample;
         }
 
-        mix = divfix16(mix, MIXFACTOR);
-
         // envelope modulation
         fix16 envelope = synth_envelope_process(_context);
+
+        // apply envelope
+        fix16 amplitude = multfix16(envelope, mix);
+
+        // apply feedback
+        fix16 feedback = amplitude +
+            multfix16(synth_circularbuffer_read(),
+                      _context->delayGain);
+
+        // limits to -1..1 with a nice curve, nicer mixing
+        feedback = float2fix16(tanhf(fix2float16(feedback)));
+
+        synth_circularbuffer_write(feedback, _context->delay);
+
+        // apply master volume
+        amplitude = multfix16(_context->volume, feedback);
 
         // scale to an 8 bit volume in a 16-bit container
         // the mix value is between -1..1
         // add 1 to move it 0..2
-        mix = mix + FIX16_UNIT;
+        amplitude = amplitude + FIX16_UNIT;
 
-        // apply envelope and master volume
-        fix16 amplitude = multfix16(multfix16(_context->volume, envelope), mix);
-
-        // we should now have a number between 0..2 (or really 0..1.99999999999 etc)
-        // scale to 8 bits by shifting >> 9  and then cast to uint16
+        // we should now have a number between 0..2 (or really 0..1.99999999999
+        // etc) scale to 8 bits by shifting >> 9  and then cast to uint16
         // shifting by 9 moves the first whole number (at bit 16), which is a
-        // zero or a one into the lower byte at bit 7
+        // zero or a one into the top of the lower byte at bit 7
         uint16_t out = (uint16_t)(amplitude >> 9);
-
-        // and that was confusing...
 
         // final volume
         _context->envelope = envelope;
@@ -94,10 +104,12 @@ static void synth_audio_context_init(uint16_t sampleRate) {
     _context->decay = float2fix16(0.05f);
     _context->sustain = float2fix16(0.5f);
     _context->release = float2fix16(0.5f);
+    _context->delay = 0;
+    _context->delayGain = float2fix16(0.5f);
 
     for (int v = 0; v < VOICES_LENGTH; v++) {
         _context->voices[v].frequency = PITCH_C3;
-        _context->voices[v].waveform = TRIANGLE;
+        _context->voices[v].waveform = SINE;
         _context->voices[v].detune = 1.f + v * 0.01;
         synth_audiocontext_set_wavetable_stride(&_context->voices[v],
                                                 _context->sampleRate);
@@ -157,16 +169,15 @@ static void synth_dma_init(uint slice) {
 
 int main() {
     set_sys_clock_khz(240000, true);
-
     stdio_init_all();
 
     printf("\n----------------------\nSynth starting.\n");
-    sleep_ms(100);
 
     synth_audio_context_init(_sampleRate);
     synth_envelope_init(_sampleRate);
     synth_midi_init(_sampleRate);
     synth_waveform_init();
+    synth_circularbuffer_init(_sampleRate);
     uint slice = synth_pwm_init(_sampleRate);
     synth_dma_init(slice);
 
