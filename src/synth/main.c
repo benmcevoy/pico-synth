@@ -30,6 +30,7 @@ static bool _swap = false;
 static int _pwmDmaChannel;
 static AudioContext_t* _context;
 static const fix16 MIXFACTOR = VOICES_LENGTH * FIX16_UNIT;
+static int _bitDepth = 9;
 
 static void fill_write_buffer() {
     for (int i = 0; i < BUFFER_LENGTH; i++) {
@@ -50,28 +51,37 @@ static void fill_write_buffer() {
         fix16 amplitude = multfix16(envelope, mix);
 
         // apply feedback
-        fix16 feedback = amplitude +
-            multfix16(synth_circularbuffer_read(),
-                      _context->delayGain);
+        fix16 feedback = amplitude + multfix16(synth_circularbuffer_read(),
+                                               _context->delayGain);
+
+        // mix/compress - tanh limits to -1..1 with a nice curve, nicer mixing
+        feedback = float2fix16(tanhf(fix2float16(feedback)));
+
+        // mix/compress - average - theoretically no clipping or distortion, just quieter
+        // feedback = divfix16(feedback, MIXFACTOR);
+
+        // mix wet+dry
+        // wet and dry are two additional parameters
+        // the feedback value above would be 
+        //
+        // fix16 feedback = multfix16(amplitude, dry) + multfix16(synth_circularbuffer_read(), wet);
+        //
+        // and the delay buffer would have the vlaue above written to it
+        // fix16 valueToWriteToDelayBuffer = amplitude + multfix16(synth_circularbuffer_read(), _context->delayGain);
 
         synth_circularbuffer_write(feedback, _context->delay);
-
-        // limits to -1..1 with a nice curve, nicer mixing
-        feedback = float2fix16(tanhf(fix2float16(feedback)));
 
         // apply master volume
         amplitude = multfix16(_context->volume, feedback);
 
-        // scale to an 8 bit volume in a 16-bit container
+        // scale to an "about 12" bit signal in a 16-bit container
         // the mix value is between -1..1
         // add 1 to move it 0..2
-        amplitude = amplitude + FIX16_UNIT;
-
         // we should now have a number between 0..2 (or really 0..1.99999999999
-        // etc) scale to 8 bits by shifting >> 9  and then cast to uint16
-        // shifting by 9 moves the first whole number (at bit 16), which is a
-        // zero or a one into the top of the lower byte at bit 7
-        uint16_t out = (uint16_t)(amplitude >> 9);
+        // need to scale to the bit depth as determined by the wrap calulated on
+        // init
+        amplitude = amplitude + FIX16_UNIT;
+        uint16_t out = (uint16_t)(amplitude >> _bitDepth);
 
         // final volume
         _context->envelope = envelope;
@@ -110,9 +120,11 @@ static void synth_audio_context_init(uint16_t sampleRate) {
     for (int v = 0; v < VOICES_LENGTH; v++) {
         _context->voices[v].frequency = PITCH_C3;
         _context->voices[v].waveform = SAW;
-        _context->voices[v].detune = 1.f + v * 0.0;
+        _context->voices[v].detune = float2fix16(1);
         synth_audiocontext_set_wavetable_stride(&_context->voices[v],
                                                 _context->sampleRate);
+
+        printf("wts: %d \n", _context->voices[v].wavetableStride)    ;
     }
 }
 
@@ -124,6 +136,8 @@ static uint synth_pwm_init(uint16_t sampleRate) {
 
     uint16_t wrap = systemClockHz / sampleRate;
     printf("wrap: %hu\n", wrap);
+
+    _bitDepth = 16 - floorf(log2(wrap + 1.f));
 
     // setup pwm
     gpio_set_function(PIN, GPIO_FUNC_PWM);

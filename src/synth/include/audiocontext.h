@@ -6,7 +6,8 @@
 #include "fixedpoint.h"
 #include "pico/stdlib.h"
 
-#define BUFFER_LENGTH 512
+#define SR_SCALE_FACTOR 2
+#define BUFFER_LENGTH 64
 #define VOICES_LENGTH 3
 
 typedef enum Waveform { SINE = 0, SQUARE, SAW, TRIANGLE, NOISE } Waveform_t;
@@ -19,9 +20,8 @@ typedef enum EnvelopeState {
 } EnvelopeState_t;
 
 typedef struct Voice {
-    // TODO: remove floats
-    float detune;
-    float frequency;
+    fix16 detune;
+    fix16 frequency;
     Waveform_t waveform;
     fix16 wavetableStride;
     fix16 waveTableReadPointer;
@@ -46,8 +46,13 @@ typedef struct AudioContext {
     fix16 release;
 } AudioContext_t;
 
-static void synth_audiocontext_set_wavetable_stride(Voice_t* voice, uint16_t sampleRate) {
-    voice->wavetableStride = float2fix16(voice->frequency * voice->detune / sampleRate);
+static void synth_audiocontext_set_wavetable_stride(Voice_t* voice,
+                                                    uint16_t sampleRate) {
+    // samplerate exceeds signed 16 bit so do some twiddling
+    voice->wavetableStride =
+        divfix16(multfix16(voice->frequency, voice->detune),
+                 int2fix16(sampleRate >> SR_SCALE_FACTOR)) >>
+        SR_SCALE_FACTOR;
 }
 
 #endif

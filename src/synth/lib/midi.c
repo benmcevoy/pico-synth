@@ -8,16 +8,12 @@
 #include "tusb.h"
 
 static uint16_t _sampleRate = 0;
-static uint8_t _notePriority[128] = {0};
+static uint8_t _notePriority[16] = {0};
 static uint8_t _notePriorityIndex = 0;
-
-float synth_midi_frequency_from_midi_note(uint8_t note) {
-    return PITCH_A4 * powf(2.f, (note - 69) / 12.f);
-}
 
 static void note_on(AudioContext_t* context, uint8_t note, uint8_t velocity) {
     fix16 sustain = velocity << 9;
-    float pitch = synth_midi_frequency_from_midi_note(note);
+    fix16 pitch = synth_midi_frequency_from_midi_note[note];
 
     context->sustain = sustain;
 
@@ -32,7 +28,7 @@ static void note_on(AudioContext_t* context, uint8_t note, uint8_t velocity) {
 
     _notePriority[_notePriorityIndex] = note;
 
-    if (_notePriorityIndex < 126) _notePriorityIndex++;
+    if (_notePriorityIndex < 14) _notePriorityIndex++;
 }
 
 static void note_off(AudioContext_t* context, uint8_t note) {
@@ -54,7 +50,7 @@ static void note_off(AudioContext_t* context, uint8_t note) {
     }
 
     note = _notePriority[_notePriorityIndex - 1];
-    float pitch = synth_midi_frequency_from_midi_note(note);
+    fix16 pitch = synth_midi_frequency_from_midi_note[note];
 
     for (int i = 0; i < VOICES_LENGTH; i++) {
         Voice_t* voice = &context->voices[i];
@@ -89,12 +85,14 @@ void control_change(AudioContext_t* context, uint8_t command,
         case SYNTH_MIDI_CC_MODWHEEL: {
             // TODO: detune is really a log parameter, so it drops off to zero
             // pretty cra cra
-            float detune = (float)parameter / 64.f;
+            // TODO: use fixedpoint
+            // float detune = (float)parameter / 64.f;
 
-            // TODO:  this can cuase some memory issues if VOICE_LENGTH < 2
-            context->voices[1].detune = detune;
-            synth_audiocontext_set_wavetable_stride(&context->voices[1],
-                                                    _sampleRate);
+            // // TODO:  this can cuase some memory issues if VOICE_LENGTH < 2
+            // TODO: use fixedpoint
+            // context->voices[1].detune = detune;
+            // synth_audiocontext_set_wavetable_stride(&context->voices[1],
+            //                                         _sampleRate);
             break;
         }
         default:

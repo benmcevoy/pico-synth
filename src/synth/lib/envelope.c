@@ -2,8 +2,6 @@
 
 #include <stdio.h>
 
-#define SR_SCALE_FACTOR 2
-
 static fix16 _sampleRate = 0;
 static EnvelopeState_t _envelopeState = OFF;
 static fix16 _remaining = 0;

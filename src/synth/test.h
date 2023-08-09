@@ -10,7 +10,13 @@
 #include "include/pitchtable.h"
 #include "include/waveform.h"
 
-static void set_frequency(AudioContext_t* context, float f,
+// TODO: get rid of floats? I don';'t really even use this fucntion
+static fix16 frequency_from_reference_pitch(fix16 reference, uint8_t pitch) {
+    float freq = fix2float16(reference);
+    return float2fix16(freq * powf(2.f, (float)pitch / 12.f));
+}
+
+static void set_frequency(AudioContext_t* context, fix16 f,
                           Waveform_t waveform) {
     for (int v = 0; v < VOICES_LENGTH; v++) {
         Voice_t* voice = &context->voices[v];
@@ -79,7 +85,7 @@ static void test_midi_pattern(AudioContext_t* context, Waveform_t waveform) {
                          56, 61, 64,  68, 74, 78, 81,  86,  90, 93, 98, 102};
 
     for (int i = 0; i < sizeof(pattern); i++) {
-        set_frequency(context, synth_midi_frequency_from_midi_note(pattern[i]),
+        set_frequency(context, synth_midi_frequency_from_midi_note[pattern[i]],
                       waveform);
         synth_envelope_note_on(context);
         sleep_ms(120);
