@@ -2,13 +2,21 @@
 #define SYNTH_AUDIOCONTEXT_
 
 #include <stdlib.h>
+#include <stdbool.h>
 
 #include "fixedpoint.h"
-#include "pico/stdlib.h"
 
-#define SR_SCALE_FACTOR 2
+// if sample rate is greater than 32767 it will not fit in a signed fix16, so
+// shift the decimal point to resolve this
+// #define SAMPLE_RATE_SCALE_FACTOR 1
+// FIX16_SCALED_SAMPLE_RATE is (SAMPLE_RATE >> SAMPLE_RATE_SCALE_FACTOR) as fix16 e.g << 16
+//#define FIX16_SCALED_SAMPLE_RATE 2147418112  
+// 32767 is a fine sample rate anyway.
+
+#define SAMPLE_RATE 32767
+#define FIX16_SAMPLE_RATE 2147418112  
 #define BUFFER_LENGTH 64
-#define VOICES_LENGTH 3
+#define VOICES_LENGTH 20
 
 typedef enum Waveform { SINE = 0, SQUARE, SAW, TRIANGLE, NOISE } Waveform_t;
 typedef enum EnvelopeState {
@@ -31,7 +39,6 @@ typedef struct Voice {
 typedef struct AudioContext {
     uint16_t* audioOut;
     size_t samplesElapsed;
-    uint16_t sampleRate;
     Voice_t voices[VOICES_LENGTH];
     fix16 volume;
 
@@ -48,11 +55,8 @@ typedef struct AudioContext {
 
 static void synth_audiocontext_set_wavetable_stride(Voice_t* voice,
                                                     uint16_t sampleRate) {
-    // samplerate exceeds signed 16 bit so do some twiddling
     voice->wavetableStride =
-        divfix16(multfix16(voice->frequency, voice->detune),
-                 int2fix16(sampleRate >> SR_SCALE_FACTOR)) >>
-        SR_SCALE_FACTOR;
+        divfix16(multfix16(voice->frequency, voice->detune), FIX16_SAMPLE_RATE);
 }
 
 #endif

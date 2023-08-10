@@ -23,56 +23,63 @@
 // uncomment to use midi or comment out for the test code
 #define USE_MIDI
 
-static uint16_t _sampleRate = 48000;
+static uint16_t _sampleRate = SAMPLE_RATE;
 static uint16_t _buffer0[BUFFER_LENGTH] = {0};
 static uint16_t _buffer1[BUFFER_LENGTH] = {0};
 static bool _swap = false;
 static int _pwmDmaChannel;
 static AudioContext_t* _context;
 static const fix16 MIXFACTOR = VOICES_LENGTH * FIX16_UNIT;
-static int _bitDepth = 9;
+static int _bitDepth = 12;
 
 static void fill_write_buffer() {
     for (int i = 0; i < BUFFER_LENGTH; i++) {
-        fix16 mix = 0;
+        fix16 amplitude = 0;
 
         for (int v = 0; v < VOICES_LENGTH; v++) {
             Voice_t* voice = &_context->voices[v];
 
             fix16 sample = synth_waveform_sample(voice);
 
-            mix += sample;
+            amplitude += sample;
         }
 
+        // ***** ENVELOPE ******
         // envelope modulation
         fix16 envelope = synth_envelope_process(_context);
+        amplitude = multfix16(envelope, amplitude);
+        // *********************
 
-        // apply envelope
-        fix16 amplitude = multfix16(envelope, mix);
-
+        // ******* DELAY ********
         // apply feedback
         fix16 feedback = amplitude + multfix16(synth_circularbuffer_read(),
                                                _context->delayGain);
+        synth_circularbuffer_write(feedback, _context->delay);
+        // *********************
 
-        // mix/compress - tanh limits to -1..1 with a nice curve, nicer mixing
-        feedback = float2fix16(tanhf(fix2float16(feedback)));
+        // **** MIX/COMPRESS ***
+        // mix/compress - tanh limits to -1..1 with a nice curve, 
+        // quite an angry distort.  also the float is a performance hit.
+        // amplitude = float2fix16(tanhf(fix2float16(feedback)));
 
-        // mix/compress - average - theoretically no clipping or distortion, just quieter
-        // feedback = divfix16(feedback, MIXFACTOR);
+        // mix/compress - average - theoretically no clipping or distortion,
+        // just quieter
+        amplitude = divfix16(feedback, MIXFACTOR);
 
         // mix wet+dry
         // wet and dry are two additional parameters
-        // the feedback value above would be 
+        // the feedback value above would be
         //
-        // fix16 feedback = multfix16(amplitude, dry) + multfix16(synth_circularbuffer_read(), wet);
+        // fix16 feedback = multfix16(amplitude, dry) +
+        // multfix16(synth_circularbuffer_read(), wet);
         //
         // and the delay buffer would have the vlaue above written to it
-        // fix16 valueToWriteToDelayBuffer = amplitude + multfix16(synth_circularbuffer_read(), _context->delayGain);
-
-        synth_circularbuffer_write(feedback, _context->delay);
+        // fix16 valueToWriteToDelayBuffer = amplitude +
+        // multfix16(synth_circularbuffer_read(), _context->delayGain);
+        // *********************
 
         // apply master volume
-        amplitude = multfix16(_context->volume, feedback);
+        amplitude = multfix16(_context->volume, amplitude);
 
         // scale to an "about 12" bit signal in a 16-bit container
         // the mix value is between -1..1
@@ -107,7 +114,6 @@ static void __isr __time_critical_func(dma_irq_handler)() {
 static void synth_audio_context_init(uint16_t sampleRate) {
     _context = malloc(sizeof(AudioContext_t));
 
-    _context->sampleRate = sampleRate;
     _context->samplesElapsed = 0;
     _context->volume = float2fix16(1);
     _context->attack = float2fix16(0.05);
@@ -119,12 +125,12 @@ static void synth_audio_context_init(uint16_t sampleRate) {
 
     for (int v = 0; v < VOICES_LENGTH; v++) {
         _context->voices[v].frequency = PITCH_C3;
-        _context->voices[v].waveform = SAW;
-        _context->voices[v].detune = float2fix16(1);
+        _context->voices[v].waveform = SINE;
+        _context->voices[v].detune = float2fix16(1 + v * 0.001);
         synth_audiocontext_set_wavetable_stride(&_context->voices[v],
-                                                _context->sampleRate);
+                                                sampleRate);
 
-        printf("wts: %d \n", _context->voices[v].wavetableStride)    ;
+        printf("wts: %d \n", _context->voices[v].wavetableStride);
     }
 }
 
@@ -188,14 +194,12 @@ int main() {
     printf("\n----------------------\nSynth starting.\n");
 
     synth_audio_context_init(_sampleRate);
-    synth_envelope_init(_sampleRate);
     synth_midi_init(_sampleRate);
-    synth_waveform_init();
-    synth_circularbuffer_init(_sampleRate);
+    synth_circularbuffer_init();
     uint slice = synth_pwm_init(_sampleRate);
     synth_dma_init(slice);
 
-    printf("SampleRate: %d\n", _context->sampleRate);
+    printf("SampleRate: %d\n", _sampleRate);
 
 #ifdef USE_MIDI
     board_init();

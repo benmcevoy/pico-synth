@@ -4,7 +4,6 @@
 #include <stdlib.h>
 
 #include "fixedpoint.h"
-#include "pico/stdlib.h"
 
 // pitches as fix16 representations
 

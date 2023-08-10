@@ -2,12 +2,6 @@
 
 #include <math.h>
 
-#define FIX16_NEGATIVE1 -65536
-
-// TODO: should be defined as fix16 constants instead
-static fix16 _waveTableLength = 0;
-static fix16 _pi = 0;
-static fix16 _twoPi = 0;
 static uint16_t _seed = 17;
 static int a = 1;
 static int b = 5;
@@ -26,20 +20,20 @@ static fix16 read_from_wt(Voice_t* voice, fix16* waveTable) {
                   multfix16(fractionAbove, waveTable[indexAbove]);
 
     voice->waveTableReadPointer +=
-        multfix16(_waveTableLength, voice->wavetableStride);
+        multfix16(FIX16_WAVE_TABLE_LENGTH, voice->wavetableStride);
 
-    while (voice->waveTableReadPointer >= _waveTableLength)
-        voice->waveTableReadPointer -= _waveTableLength;
+    while (voice->waveTableReadPointer >= FIX16_WAVE_TABLE_LENGTH)
+        voice->waveTableReadPointer -= FIX16_WAVE_TABLE_LENGTH;
 
     return value;
 }
 
 static fix16 square(Voice_t* voice) {
-    fix16 value = (voice->waveTablePhase < _pi) ? FIX16_UNIT : FIX16_NEGATIVE1;
+    fix16 value = (voice->waveTablePhase < FIX16_PI) ? FIX16_UNIT : FIX16_NEGATIVE1;
 
-    voice->waveTablePhase += multfix16(_twoPi, voice->wavetableStride);
+    voice->waveTablePhase += multfix16(FIX16_TWOPI, voice->wavetableStride);
 
-    if (voice->waveTablePhase > _twoPi) voice->waveTablePhase -= _twoPi;
+    if (voice->waveTablePhase > FIX16_TWOPI) voice->waveTablePhase -= FIX16_TWOPI;
 
     return value;
 }
@@ -69,10 +63,4 @@ fix16 synth_waveform_sample(Voice_t* voice) {
         default:
             return 0;
     }
-}
-
-void synth_waveform_init() {
-    _waveTableLength = int2fix16(WAVE_TABLE_LENGTH);
-    _pi = float2fix16(M_PI);
-    _twoPi = float2fix16(M_PI * 2.f);
 }

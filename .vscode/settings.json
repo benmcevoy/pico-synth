@@ -39,6 +39,7 @@
         "audio_pwm.h": "c",
         "noise.h": "c",
         "audio_i2s.h": "c",
-        "stdint.h": "c"
+        "stdint.h": "c",
+        "fixedpoint.h": "c"
     }
 }

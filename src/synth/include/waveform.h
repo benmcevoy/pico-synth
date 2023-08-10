@@ -8,16 +8,14 @@
 #define M_PI 3.14159265358979323846f
 #endif
 
-
 #define WAVE_TABLE_LENGTH 512
+#define FIX16_WAVE_TABLE_LENGTH 33554432
 
 /*! \brief Generate an audio sample
  *
  * \param context The audio context
  */
 fix16 synth_waveform_sample(Voice_t* context);
-
-void synth_waveform_init();
 
 static fix16 SineWaveTable[WAVE_TABLE_LENGTH] = {
     0,      804,    1608,   2412,   3215,   4018,   4821,   5622,   6423,

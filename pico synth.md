@@ -1140,15 +1140,18 @@ Or the filter could be invested in, as it sounds a bit weak at the moment.
 Maybe I could string a few pico together with I2S as a kinda modular physical/digital synth?  That is an idea.  One pico does oscillator, another filter, another echo, etc.
 
 features:
-
-- monophonic, two oscillators
-- amplitude envelope (on the mix)
 - osc3 as LFO 
 - filter envelope
 
+DONE - monophonic, two oscillators
+
+DONE - amplitude envelope (on the mix)
+
+
 and if we have the cpu
 - arp
-- delay
+ 
+DONE - delay
 
 and we need patches or some kinda controller with lots of knobs
 
@@ -1156,7 +1159,10 @@ so my work is cut out.
 
 ## monophonic
 
-- fix the note priority
+DONE - fix the note priority
+
+I looked to BELA once more, they demonstrate a most recent note priority schem, so I implemented it. 
+
 DONE - only voice1+2
 
 ## Amplitude envelope
@@ -1186,6 +1192,7 @@ how to program?  hold down many keys?  use a chord table?
 
 ## Echo echo echo
 
+add a circular buffer.  i like it.
 
 ## Fixed point
 

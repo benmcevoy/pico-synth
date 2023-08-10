@@ -102,12 +102,8 @@ void control_change(AudioContext_t* context, uint8_t command,
 
 static void process_midi_command(AudioContext_t* context, uint8_t packet[4]) {
     uint8_t command = packet[1] & 0b11110000;
-    uint8_t channel = packet[1] & 0b00001111;
 
-    //    if (channel >= VOICES_LENGTH) return;
-
-    // printf("midi: %d %d %d %d %d\n", command, packet[0], packet[1],
-    // packet[2], packet[3]);
+    // printf("midi: %d %d %d %d %d\n", command, packet[0],packet[1],packet[2],packet[3]);
 
     switch (command) {
         case SYNTH_MIDI_NOTEON:

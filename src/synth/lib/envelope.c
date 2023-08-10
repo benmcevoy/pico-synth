@@ -2,14 +2,13 @@
 
 #include <stdio.h>
 
-static fix16 _sampleRate = 0;
 static EnvelopeState_t _envelopeState = OFF;
 static fix16 _remaining = 0;
 static fix16 _duration = 0;
 static fix16 _envelopeStart = 0;
 
 fix16 to_duration(fix16 value) {
-    return multfix16(value, _sampleRate) << SR_SCALE_FACTOR;
+    return multfix16(value, FIX16_SAMPLE_RATE) ;
 }
 
 static fix16 elapsed(fix16 remain, fix16 duration) {
@@ -97,11 +96,4 @@ fix16 synth_envelope_process(AudioContext_t* context) {
         default:
             return 0;
     }
-}
-
-void synth_envelope_init(uint16_t sampleRate) {
-    // target sample rate is 44.1k which may not fit in a 16 bit value
-    // once it is multiplied by a duration that is greater than ~1.5seconds
-    // so scale it down
-    _sampleRate = int2fix16(sampleRate >> SR_SCALE_FACTOR);
 }

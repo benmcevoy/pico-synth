@@ -4,16 +4,13 @@
 
 // TODO: hard code to 1 seconds of samples, should maybe be fix16* and then
 // malloc when initialised
-#define CIRCULARBUFFER_WRAP 48000
+#define CIRCULARBUFFER_WRAP SAMPLE_RATE
 
-static uint16_t _sampleRate = 0;
 static fix16 _buffer[CIRCULARBUFFER_WRAP] = {};
 static int _readPointer;
 static int _writePointer;
 
-void synth_circularbuffer_init(uint16_t sampleRate) {
-    _sampleRate = sampleRate;
-
+void synth_circularbuffer_init() {
     _writePointer = 0;
     _readPointer = 0;
 }

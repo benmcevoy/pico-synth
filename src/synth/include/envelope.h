@@ -4,8 +4,6 @@
 #include "audiocontext.h"
 #include "fixedpoint.h"
 
-void synth_envelope_init(uint16_t sampleRate);
-
 fix16 synth_envelope_process(AudioContext_t* context);
 
 void synth_envelope_note_on(AudioContext_t* context);
