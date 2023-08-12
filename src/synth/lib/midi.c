@@ -97,16 +97,10 @@ void control_change(AudioContext_t* context, uint8_t command,
         }
 
         case SYNTH_MIDI_CC_MODWHEEL: {
-            // TODO: detune is really a log parameter, so it drops off to zero
-            // pretty cra cra
-            // TODO: use fixedpoint
-            // float detune = (float)parameter / 64.f;
-
-            // // TODO:  this can cuase some memory issues if VOICE_LENGTH < 2
-            // TODO: use fixedpoint
-            // context->voices[1].detune = detune;
-            // synth_audiocontext_set_wavetable_stride(&context->voices[1],
-            //                                         _sampleRate);
+            fix16 value = 64 + parameter << 9;
+            context->voices[0].detune = value;
+            synth_audiocontext_set_wavetable_stride(&context->voices[0],
+                                                    _sampleRate);
             break;
         }
         default:

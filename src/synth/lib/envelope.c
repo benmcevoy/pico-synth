@@ -22,7 +22,9 @@ static fix16 linear_easing(fix16 remain, fix16 duration, fix16 start,
                : start + multfix16(elapsed(remain, duration), (end - start));
 }
 
-fix16 synth_envelope_to_duration(fix16 value) { return multfix16(value, FIX16_SAMPLE_RATE); }
+fix16 synth_envelope_to_duration(fix16 value) {
+    return multfix16(value, FIX16_SAMPLE_RATE);
+}
 
 void synth_envelope_note_on(AudioContext_t* context) {
     context->triggerAttack = true;
@@ -101,9 +103,9 @@ fix16 synth_envelope_gate(Gate_t* gate) {
     switch (gate->state) {
         case ATTACK:
             if (gate->remaining <= EPSILON) {
-                gate->duration = gate->onDuration;
+                gate->duration = gate->onDuration >> 1;
                 gate->remaining = gate->duration;
-                gate->state = DECAY;
+                gate->state = SUSTAIN;
                 return FIX16_ONE;
             }
 
@@ -111,12 +113,24 @@ fix16 synth_envelope_gate(Gate_t* gate) {
 
             return linear_easing(gate->remaining, gate->duration, 0, FIX16_ONE);
 
-        case DECAY:
+        case SUSTAIN:
+            if (gate->remaining <= EPSILON) {
+                gate->duration = gate->onDuration;
+                gate->remaining = gate->duration;
+                gate->state = RELEASE;
+                return FIX16_ONE;
+            }
+
+            gate->remaining -= FIX16_ONE;
+
+            return FIX16_ONE;
+
+        case RELEASE:
             if (gate->remaining <= EPSILON) {
                 gate->duration = gate->offDuration;
                 gate->remaining = gate->duration;
                 gate->state = OFF;
-                return 0;
+                return FIX16_ONE;
             }
 
             gate->remaining -= FIX16_ONE;
@@ -125,10 +139,10 @@ fix16 synth_envelope_gate(Gate_t* gate) {
 
         case OFF:
             if (gate->remaining <= EPSILON) {
-                gate->duration = gate->onDuration;
+                gate->duration = gate->onDuration >> 1;
                 gate->remaining = gate->duration;
                 gate->state = ATTACK;
-                return FIX16_ONE;
+                return 0;
             }
 
             gate->remaining -= FIX16_ONE;

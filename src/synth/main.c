@@ -46,10 +46,11 @@ static void fill_write_buffer() {
 
         // ***** ENVELOPE ******
         // envelope modulation
-        amplitude = multfix16(amplitude, synth_envelope_process(_context));
+        fix16 envelope = synth_envelope_process(_context);
+        amplitude = multfix16(amplitude, envelope);
         // *********************
 
-        // ******* DELAY ********
+        // **** DELAY/ECHO *****
         // apply feedback
         amplitude = amplitude +
                     multfix16(synth_circularbuffer_read(), _context->delayGain);
@@ -99,7 +100,7 @@ static void fill_write_buffer() {
         uint16_t out = (uint16_t)(amplitude >> _bitDepth);
 
         // final volume
-        //_context->envelope = envelope;
+        _context->envelope = envelope;
         _context->audioOut[i] = out;
         _context->samplesElapsed++;
     }
@@ -128,14 +129,14 @@ static void synth_audio_context_init(uint16_t sampleRate) {
     _context->attack = float2fix16(0.05);
     _context->decay = float2fix16(0.05f);
     _context->sustain = float2fix16(0.5f);
-    _context->release = float2fix16(0.5f);
+    _context->release = float2fix16(0.1f);
     _context->delay = 0;
     _context->delayGain = 0;
 
     for (int v = 0; v < VOICES_LENGTH; v++) {
         _context->voices[v].frequency = PITCH_C3;
         _context->voices[v].waveform = SINE;
-        _context->voices[v].detune = float2fix16(1 + v * 0);
+        _context->voices[v].detune = float2fix16(1 + v * 0.001);
         synth_audiocontext_set_wavetable_stride(&_context->voices[v],
                                                 sampleRate);
 
@@ -147,7 +148,7 @@ static void synth_audio_context_init(uint16_t sampleRate) {
             synth_envelope_to_duration(float2fix16(0.125f));
         _context->gates[g].offDuration =
             synth_envelope_to_duration(float2fix16(0.75f));
-        _context->gates[g].state = OFF;
+        _context->gates[g].state = ATTACK;
         _context->gates[g].remaining = 0;
         _context->gates[g].duration = 0;
     }

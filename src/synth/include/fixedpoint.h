@@ -6,9 +6,10 @@
 #define EPSILON 8
 
 #define FIX16_ONE 65536
+#define FIX16_NEGATIVE_ONE -65536
+
 #define FIX16_PI 205887
 #define FIX16_TWOPI 411774
-#define FIX16_NEGATIVE_ONE -65536
 
 // fixed point 16.16dp
 typedef int32_t fix16;

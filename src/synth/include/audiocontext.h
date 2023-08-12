@@ -17,7 +17,7 @@
 #define SAMPLE_RATE 32767
 #define FIX16_SAMPLE_RATE 2147418112
 #define BUFFER_LENGTH 64
-#define VOICES_LENGTH 1
+#define VOICES_LENGTH 6
 #define GATES_LENGTH 2
 
 typedef enum Waveform { SINE = 0, SQUARE, SAW, TRIANGLE, NOISE } Waveform_t;
@@ -29,7 +29,8 @@ typedef enum EnvelopeState {
     RELEASE
 } EnvelopeState_t;
 
-// TODO: is this really an ENVELOPE struct?
+// TODO: is this really an ENVELOPE struct?  on and off are not the best names either
+// what I want is the gating to be triggered at a tempo
 typedef struct Gate {
     fix16 onDuration;
     fix16 offDuration;
