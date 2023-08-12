@@ -82,6 +82,20 @@ void control_change(AudioContext_t* context, uint8_t command,
             break;
         }
 
+        case SYNTH_MIDI_CC_ATTACK: {
+            // only half range
+            fix16 value = parameter << 8;
+            context->gates[0].offDuration = synth_envelope_to_duration(value);
+            break;
+        }
+
+        case SYNTH_MIDI_CC_RELEASE: {
+            // only half range
+            fix16 value = parameter << 8;
+            context->gates[1].offDuration = synth_envelope_to_duration(value);
+            break;
+        }
+
         case SYNTH_MIDI_CC_MODWHEEL: {
             // TODO: detune is really a log parameter, so it drops off to zero
             // pretty cra cra
@@ -103,7 +117,8 @@ void control_change(AudioContext_t* context, uint8_t command,
 static void process_midi_command(AudioContext_t* context, uint8_t packet[4]) {
     uint8_t command = packet[1] & 0b11110000;
 
-    // printf("midi: %d %d %d %d %d\n", command, packet[0],packet[1],packet[2],packet[3]);
+    // printf("midi: %d %d %d %d %d\n", command,
+    // packet[0],packet[1],packet[2],packet[3]);
 
     switch (command) {
         case SYNTH_MIDI_NOTEON:

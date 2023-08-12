@@ -29,7 +29,7 @@ static uint16_t _buffer1[BUFFER_LENGTH] = {0};
 static bool _swap = false;
 static int _pwmDmaChannel;
 static AudioContext_t* _context;
-static const fix16 MIXFACTOR = VOICES_LENGTH * FIX16_UNIT;
+static const fix16 MIXFACTOR = VOICES_LENGTH * FIX16_ONE;
 static int _bitDepth = 12;
 
 static void fill_write_buffer() {
@@ -46,25 +46,33 @@ static void fill_write_buffer() {
 
         // ***** ENVELOPE ******
         // envelope modulation
-        fix16 envelope = synth_envelope_process(_context);
-        amplitude = multfix16(envelope, amplitude);
+        amplitude = multfix16(amplitude, synth_envelope_process(_context));
         // *********************
 
         // ******* DELAY ********
         // apply feedback
-        fix16 feedback = amplitude + multfix16(synth_circularbuffer_read(),
-                                               _context->delayGain);
-        synth_circularbuffer_write(feedback, _context->delay);
+        amplitude = amplitude +
+                    multfix16(synth_circularbuffer_read(), _context->delayGain);
+        synth_circularbuffer_write(amplitude, _context->delay);
+        // *********************
+
+        // ******* GATE ********
+        fix16 tmp = 0;
+        for (int g = 0; g < GATES_LENGTH; g++) {
+            fix16 gate = synth_envelope_gate(&_context->gates[g]);
+            tmp += multfix16(gate, amplitude);
+        }
+        amplitude = tmp;
         // *********************
 
         // **** MIX/COMPRESS ***
-        // mix/compress - tanh limits to -1..1 with a nice curve, 
+        // mix/compress - tanh limits to -1..1 with a nice curve,
         // quite an angry distort.  also the float is a performance hit.
-        // amplitude = float2fix16(tanhf(fix2float16(feedback)));
+        amplitude = float2fix16(tanhf(fix2float16(amplitude)));
 
         // mix/compress - average - theoretically no clipping or distortion,
         // just quieter
-        amplitude = divfix16(feedback, MIXFACTOR);
+        // amplitude = divfix16(amplitude, MIXFACTOR);
 
         // mix wet+dry
         // wet and dry are two additional parameters
@@ -87,11 +95,11 @@ static void fill_write_buffer() {
         // we should now have a number between 0..2 (or really 0..1.99999999999
         // need to scale to the bit depth as determined by the wrap calulated on
         // init
-        amplitude = amplitude + FIX16_UNIT;
+        amplitude = amplitude + FIX16_ONE;
         uint16_t out = (uint16_t)(amplitude >> _bitDepth);
 
         // final volume
-        _context->envelope = envelope;
+        //_context->envelope = envelope;
         _context->audioOut[i] = out;
         _context->samplesElapsed++;
     }
@@ -115,6 +123,7 @@ static void synth_audio_context_init(uint16_t sampleRate) {
     _context = malloc(sizeof(AudioContext_t));
 
     _context->samplesElapsed = 0;
+    _context->triggerAttack = false;
     _context->volume = float2fix16(1);
     _context->attack = float2fix16(0.05);
     _context->decay = float2fix16(0.05f);
@@ -126,11 +135,21 @@ static void synth_audio_context_init(uint16_t sampleRate) {
     for (int v = 0; v < VOICES_LENGTH; v++) {
         _context->voices[v].frequency = PITCH_C3;
         _context->voices[v].waveform = SINE;
-        _context->voices[v].detune = float2fix16(1 + v * 0.001);
+        _context->voices[v].detune = float2fix16(1 + v * 0);
         synth_audiocontext_set_wavetable_stride(&_context->voices[v],
                                                 sampleRate);
 
         printf("wts: %d \n", _context->voices[v].wavetableStride);
+    }
+
+    for (int g = 0; g < GATES_LENGTH; g++) {
+        _context->gates[g].onDuration =
+            synth_envelope_to_duration(float2fix16(0.125f));
+        _context->gates[g].offDuration =
+            synth_envelope_to_duration(float2fix16(0.75f));
+        _context->gates[g].state = OFF;
+        _context->gates[g].remaining = 0;
+        _context->gates[g].duration = 0;
     }
 }
 

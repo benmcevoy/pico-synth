@@ -3,20 +3,16 @@
 #include <stdio.h>
 
 static EnvelopeState_t _envelopeState = OFF;
-static fix16 _remaining = 0;
-static fix16 _duration = 0;
+static fix16 _envelopeRemaining = 0;
+static fix16 _envelopeDuration = 0;
 static fix16 _envelopeStart = 0;
-
-fix16 to_duration(fix16 value) {
-    return multfix16(value, FIX16_SAMPLE_RATE) ;
-}
 
 static fix16 elapsed(fix16 remain, fix16 duration) {
     return divfix16((duration - remain), duration);
 }
 
 static bool has_elapsed(fix16 remain, fix16 duration) {
-    return elapsed(remain, duration) >= FIX16_UNIT;
+    return elapsed(remain, duration) >= FIX16_ONE;
 }
 
 static fix16 linear_easing(fix16 remain, fix16 duration, fix16 start,
@@ -25,6 +21,8 @@ static fix16 linear_easing(fix16 remain, fix16 duration, fix16 start,
                ? end
                : start + multfix16(elapsed(remain, duration), (end - start));
 }
+
+fix16 synth_envelope_to_duration(fix16 value) { return multfix16(value, FIX16_SAMPLE_RATE); }
 
 void synth_envelope_note_on(AudioContext_t* context) {
     context->triggerAttack = true;
@@ -37,8 +35,8 @@ void synth_envelope_note_off(AudioContext_t* context) {
 fix16 synth_envelope_process(AudioContext_t* context) {
     if (context->triggerAttack &&
         (_envelopeState == OFF || _envelopeState == RELEASE)) {
-        _duration = to_duration(context->attack);
-        _remaining = _duration;
+        _envelopeDuration = synth_envelope_to_duration(context->attack);
+        _envelopeRemaining = _envelopeDuration;
         _envelopeState = ATTACK;
         _envelopeStart = context->envelope;
     }
@@ -46,8 +44,8 @@ fix16 synth_envelope_process(AudioContext_t* context) {
     if (!context->triggerAttack &&
         (_envelopeState == ATTACK || _envelopeState == DECAY ||
          _envelopeState == SUSTAIN)) {
-        _duration = to_duration(context->release);
-        _remaining = _duration;
+        _envelopeDuration = synth_envelope_to_duration(context->release);
+        _envelopeRemaining = _envelopeDuration;
         _envelopeState = RELEASE;
         _envelopeStart = context->envelope;
     }
@@ -57,41 +55,85 @@ fix16 synth_envelope_process(AudioContext_t* context) {
             return 0;
 
         case ATTACK:
-            if (_remaining <= EPSILON) {
-                _duration = to_duration(context->decay);
-                _remaining = _duration;
+            if (_envelopeRemaining <= EPSILON) {
+                _envelopeDuration = synth_envelope_to_duration(context->decay);
+                _envelopeRemaining = _envelopeDuration;
                 _envelopeState = DECAY;
-                return FIX16_UNIT;
+                return FIX16_ONE;
             }
 
-            _remaining = _remaining - FIX16_UNIT;
+            _envelopeRemaining -= FIX16_ONE;
 
-            return linear_easing(_remaining, _duration, _envelopeStart,
-                                 FIX16_UNIT);
+            return linear_easing(_envelopeRemaining, _envelopeDuration,
+                                 _envelopeStart, FIX16_ONE);
 
         case DECAY:
-            if (_remaining <= EPSILON) {
+            if (_envelopeRemaining <= EPSILON) {
                 _envelopeState = SUSTAIN;
                 return context->sustain;
             }
 
-            _remaining = _remaining - FIX16_UNIT;
+            _envelopeRemaining -= FIX16_ONE;
 
-            return linear_easing(_remaining, _duration, FIX16_UNIT,
-                                 context->sustain);
+            return linear_easing(_envelopeRemaining, _envelopeDuration,
+                                 FIX16_ONE, context->sustain);
 
         case SUSTAIN:
             return context->sustain;
 
         case RELEASE:
-            if (_remaining <= EPSILON) {
+            if (_envelopeRemaining <= EPSILON) {
                 _envelopeState = OFF;
                 return 0;
             }
 
-            _remaining = _remaining - FIX16_UNIT;
+            _envelopeRemaining -= FIX16_ONE;
 
-            return linear_easing(_remaining, _duration, _envelopeStart, 0);
+            return linear_easing(_envelopeRemaining, _envelopeDuration,
+                                 _envelopeStart, 0);
+
+        default:
+            return 0;
+    }
+}
+
+fix16 synth_envelope_gate(Gate_t* gate) {
+    switch (gate->state) {
+        case ATTACK:
+            if (gate->remaining <= EPSILON) {
+                gate->duration = gate->onDuration;
+                gate->remaining = gate->duration;
+                gate->state = DECAY;
+                return FIX16_ONE;
+            }
+
+            gate->remaining -= FIX16_ONE;
+
+            return linear_easing(gate->remaining, gate->duration, 0, FIX16_ONE);
+
+        case DECAY:
+            if (gate->remaining <= EPSILON) {
+                gate->duration = gate->offDuration;
+                gate->remaining = gate->duration;
+                gate->state = OFF;
+                return 0;
+            }
+
+            gate->remaining -= FIX16_ONE;
+
+            return linear_easing(gate->remaining, gate->duration, FIX16_ONE, 0);
+
+        case OFF:
+            if (gate->remaining <= EPSILON) {
+                gate->duration = gate->onDuration;
+                gate->remaining = gate->duration;
+                gate->state = ATTACK;
+                return FIX16_ONE;
+            }
+
+            gate->remaining -= FIX16_ONE;
+
+            return 0;
 
         default:
             return 0;
