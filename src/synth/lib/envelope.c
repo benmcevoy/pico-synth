@@ -7,19 +7,10 @@ static fix16 _envelopeRemaining = 0;
 static fix16 _envelopeDuration = 0;
 static fix16 _envelopeStart = 0;
 
-static fix16 elapsed(fix16 remain, fix16 duration) {
-    return divfix16((duration - remain), duration);
-}
-
-static bool has_elapsed(fix16 remain, fix16 duration) {
-    return elapsed(remain, duration) >= FIX16_ONE;
-}
-
 static fix16 linear_easing(fix16 remain, fix16 duration, fix16 start,
                            fix16 end) {
-    return has_elapsed(remain, duration)
-               ? end
-               : start + multfix16(elapsed(remain, duration), (end - start));
+    fix16 elapsed = divfix16((duration - remain), duration);
+    return lerp(elapsed, start, end);
 }
 
 fix16 synth_envelope_to_duration(fix16 value) {

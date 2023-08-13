@@ -26,7 +26,14 @@ target_include_directories(${projectName} PUBLIC
         ${CMAKE_CURRENT_LIST_DIR})
 
 # pull in common dependencies
-target_link_libraries(${projectName} PUBLIC pico_stdlib hardware_pwm hardware_dma tinyusb_device tinyusb_board pico_unique_id)
+target_link_libraries(${projectName} PUBLIC 
+    pico_stdlib 
+    hardware_pwm 
+    hardware_dma 
+    hardware_interp
+    tinyusb_device 
+    tinyusb_board
+    pico_unique_id)
 
 
 # create map/bin/hex/uf2 file etc.

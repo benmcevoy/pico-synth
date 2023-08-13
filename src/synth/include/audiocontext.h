@@ -20,6 +20,12 @@
 #define VOICES_LENGTH 6
 #define GATES_LENGTH 2
 
+// TODO: this is not a reasonable place to park this code
+static fix16 lerp(fix16 fraction, fix16 start, fix16 end) {
+    return fraction >= FIX16_ONE ? end
+                                 : start + multfix16(fraction, (end - start));
+}
+
 typedef enum Waveform { SINE = 0, SQUARE, SAW, TRIANGLE, NOISE } Waveform_t;
 typedef enum EnvelopeState {
     OFF = 0,

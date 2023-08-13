@@ -144,11 +144,9 @@ static void synth_audio_context_init(uint16_t sampleRate) {
     }
 
     for (int g = 0; g < GATES_LENGTH; g++) {
-        _context->gates[g].onDuration =
-            synth_envelope_to_duration(float2fix16(0.125f));
-        _context->gates[g].offDuration =
-            synth_envelope_to_duration(float2fix16(0.75f));
-        _context->gates[g].state = ATTACK;
+        _context->gates[g].onDuration = 0;
+        _context->gates[g].offDuration = 0;
+        _context->gates[g].state = OFF;
         _context->gates[g].remaining = 0;
         _context->gates[g].duration = 0;
     }
@@ -207,12 +205,7 @@ static void synth_dma_init(uint slice) {
     irq_set_enabled(DMA_IRQ_0, true);
 }
 
-int main() {
-    set_sys_clock_khz(240000, true);
-    stdio_init_all();
-
-    printf("\n----------------------\nSynth starting.\n");
-
+void init_all() {
     synth_audio_context_init(_sampleRate);
     synth_midi_init(_sampleRate);
     synth_circularbuffer_init();
@@ -236,6 +229,15 @@ int main() {
         synth_midi_task(_context);
 #endif
     }
+}
+
+int main() {
+    set_sys_clock_khz(240000, true);
+    stdio_init_all();
+
+    printf("\n----------------------\nSynth starting.\n");
+
+    init_all();
 }
 
 // Invoked when device is mounted
