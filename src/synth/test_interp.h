@@ -23,7 +23,7 @@ fix16 synth_lerp(fix16 fraction, fix16 a, fix16 b) {
     interp0->base[1] = b;
     // move bits 9-16 of the fix16 to bits 0-8
     // this can/should be done in the hardware, it has a shift and mask for this
-    interp0->accum[1] = fraction;
+    interp0->accum[1] = fraction >> 8;
 
     return interp0->peek[1];
 }
