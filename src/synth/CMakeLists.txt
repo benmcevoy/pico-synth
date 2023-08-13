@@ -10,7 +10,7 @@ add_executable(${projectName} main.c
     lib/midi.c
     lib/waveform.c)
 
-pico_set_binary_type(${projectName} no_flash)
+#pico_set_binary_type(${projectName} no_flash)
 
 # # allow stable overclock - set SPI flash clock divider - necessary over 300MHz 
 # pico_define_boot_stage2(${projectName} ${PICO_DEFAULT_BOOT_STAGE2_FILE})
