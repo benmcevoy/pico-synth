@@ -15,7 +15,7 @@ static void note_on(AudioContext_t* context, uint8_t note, uint8_t velocity) {
     fix16 sustain = velocity << 9;
     fix16 pitch = synth_midi_frequency_from_midi_note[note];
 
-    context->sustain = sustain;
+    context->envelope.sustain = sustain;
 
     for (int i = 0; i < VOICES_LENGTH; i++) {
         Voice_t* voice = &context->voices[i];
@@ -85,14 +85,14 @@ void control_change(AudioContext_t* context, uint8_t command,
         case SYNTH_MIDI_CC_ATTACK: {
             // only half range
             fix16 value = parameter << 8;
-            context->gates[0].offDuration = synth_envelope_to_duration(value);
+            context->gates[0].sustain = synth_envelope_to_duration(value);
             break;
         }
 
         case SYNTH_MIDI_CC_RELEASE: {
             // only half range
             fix16 value = parameter << 8;
-            context->gates[1].offDuration = synth_envelope_to_duration(value);
+            context->gates[1].sustain = synth_envelope_to_duration(value);
             break;
         }
 

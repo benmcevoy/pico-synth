@@ -35,15 +35,24 @@ typedef enum EnvelopeState {
     RELEASE
 } EnvelopeState_t;
 
-// TODO: is this really an ENVELOPE struct?  on and off are not the best names either
-// what I want is the gating to be triggered at a tempo
-typedef struct Gate {
-    fix16 onDuration;
-    fix16 offDuration;
+// TODO: is this really an ENVELOPE struct?
+// gate and envelope are very similar, i have shoved them together here but it's
+// awkward
+// if i trigger the gating on a tempo or sequence then i think 
+// my problems will  go away, sustain will  be level for both
+// and "hold duration" will be determined by the external trigger
+typedef struct Envelope {
     EnvelopeState_t state;
     fix16 remaining;
     fix16 duration;
-} Gate_t;
+    fix16 envelope;
+
+    fix16 attack;
+    fix16 decay;
+    // TODO: i use sustain as EITHER a duration OR a level
+    fix16 sustain;
+    fix16 release;
+} Envelope_t;
 
 typedef struct Voice {
     fix16 detune;
@@ -64,13 +73,9 @@ typedef struct AudioContext {
     fix16 delayGain;
 
     bool triggerAttack;
-    fix16 envelope;
-    fix16 attack;
-    fix16 decay;
-    fix16 sustain;
-    fix16 release;
+    Envelope_t envelope;
 
-    Gate_t gates[GATES_LENGTH];
+    Envelope_t gates[GATES_LENGTH];
 
 } AudioContext_t;
 

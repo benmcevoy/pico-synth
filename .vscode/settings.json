@@ -40,6 +40,9 @@
         "noise.h": "c",
         "audio_i2s.h": "c",
         "stdint.h": "c",
-        "fixedpoint.h": "c"
+        "fixedpoint.h": "c",
+        "memory": "c",
+        "semaphore": "c",
+        "stop_token": "c"
     }
 }

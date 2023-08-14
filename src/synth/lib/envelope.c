@@ -28,19 +28,19 @@ void synth_envelope_note_off(AudioContext_t* context) {
 fix16 synth_envelope_process(AudioContext_t* context) {
     if (context->triggerAttack &&
         (_envelopeState == OFF || _envelopeState == RELEASE)) {
-        _envelopeDuration = synth_envelope_to_duration(context->attack);
+        _envelopeDuration = context->envelope.attack;
         _envelopeRemaining = _envelopeDuration;
         _envelopeState = ATTACK;
-        _envelopeStart = context->envelope;
+        _envelopeStart = context->envelope.envelope;
     }
 
     if (!context->triggerAttack &&
         (_envelopeState == ATTACK || _envelopeState == DECAY ||
          _envelopeState == SUSTAIN)) {
-        _envelopeDuration = synth_envelope_to_duration(context->release);
+        _envelopeDuration = context->envelope.release;
         _envelopeRemaining = _envelopeDuration;
         _envelopeState = RELEASE;
-        _envelopeStart = context->envelope;
+        _envelopeStart = context->envelope.envelope;
     }
 
     switch (_envelopeState) {
@@ -49,7 +49,7 @@ fix16 synth_envelope_process(AudioContext_t* context) {
 
         case ATTACK:
             if (_envelopeRemaining <= EPSILON) {
-                _envelopeDuration = synth_envelope_to_duration(context->decay);
+                _envelopeDuration = context->envelope.decay;
                 _envelopeRemaining = _envelopeDuration;
                 _envelopeState = DECAY;
                 return FIX16_ONE;
@@ -63,16 +63,16 @@ fix16 synth_envelope_process(AudioContext_t* context) {
         case DECAY:
             if (_envelopeRemaining <= EPSILON) {
                 _envelopeState = SUSTAIN;
-                return context->sustain;
+                return context->envelope.sustain;
             }
 
             _envelopeRemaining -= FIX16_ONE;
 
             return linear_easing(_envelopeRemaining, _envelopeDuration,
-                                 FIX16_ONE, context->sustain);
+                                 FIX16_ONE, context->envelope.sustain);
 
         case SUSTAIN:
-            return context->sustain;
+            return context->envelope.sustain;
 
         case RELEASE:
             if (_envelopeRemaining <= EPSILON) {
@@ -90,11 +90,11 @@ fix16 synth_envelope_process(AudioContext_t* context) {
     }
 }
 
-fix16 synth_envelope_gate(Gate_t* gate) {
+fix16 synth_envelope_gate(Envelope_t* gate) {
     switch (gate->state) {
         case ATTACK:
             if (gate->remaining <= EPSILON) {
-                gate->duration = gate->onDuration;
+                gate->duration = gate->decay;
                 gate->remaining = gate->duration;
                 gate->state = SUSTAIN;
                 return FIX16_ONE;
@@ -106,7 +106,7 @@ fix16 synth_envelope_gate(Gate_t* gate) {
 
         case SUSTAIN:
             if (gate->remaining <= EPSILON) {
-                gate->duration = gate->onDuration;
+                gate->duration = gate->release;
                 gate->remaining = gate->duration;
                 gate->state = RELEASE;
                 return FIX16_ONE;
@@ -118,7 +118,7 @@ fix16 synth_envelope_gate(Gate_t* gate) {
 
         case RELEASE:
             if (gate->remaining <= EPSILON) {
-                gate->duration = gate->offDuration;
+                gate->duration = gate->sustain;
                 gate->remaining = gate->duration;
                 gate->state = OFF;
                 return FIX16_ONE;
@@ -130,7 +130,7 @@ fix16 synth_envelope_gate(Gate_t* gate) {
 
         case OFF:
             if (gate->remaining <= EPSILON) {
-                gate->duration = gate->onDuration;
+                gate->duration = gate->attack;
                 gate->remaining = gate->duration;
                 gate->state = ATTACK;
                 return 0;

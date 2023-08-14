@@ -100,7 +100,7 @@ static void fill_write_buffer() {
         uint16_t out = (uint16_t)(amplitude >> _bitDepth);
 
         // final volume
-        _context->envelope = envelope;
+        _context->envelope.envelope = envelope;
         _context->audioOut[i] = out;
         _context->samplesElapsed++;
     }
@@ -126,10 +126,10 @@ static void synth_audio_context_init(uint16_t sampleRate) {
     _context->samplesElapsed = 0;
     _context->triggerAttack = false;
     _context->volume = float2fix16(1);
-    _context->attack = float2fix16(0.05);
-    _context->decay = float2fix16(0.05f);
-    _context->sustain = float2fix16(0.5f);
-    _context->release = float2fix16(0.1f);
+    _context->envelope.attack = synth_envelope_to_duration(float2fix16(0.05));
+    _context->envelope.decay = synth_envelope_to_duration(float2fix16(0.05f));
+    _context->envelope.sustain = float2fix16(0.5f);
+    _context->envelope.release = synth_envelope_to_duration(float2fix16(0.1f));
     _context->delay = 0;
     _context->delayGain = 0;
 
@@ -144,8 +144,10 @@ static void synth_audio_context_init(uint16_t sampleRate) {
     }
 
     for (int g = 0; g < GATES_LENGTH; g++) {
-        _context->gates[g].onDuration = synth_envelope_to_duration(float2fix16(0.02f));
-        _context->gates[g].offDuration = 0;
+        _context->gates[g].attack = synth_envelope_to_duration(float2fix16(0.02f));
+        _context->gates[g].decay = synth_envelope_to_duration(float2fix16(0.02f));
+        _context->gates[g].release = synth_envelope_to_duration(float2fix16(0.02f));
+        _context->gates[g].sustain = 0;
         _context->gates[g].state = OFF;
         _context->gates[g].remaining = 0;
         _context->gates[g].duration = 0;
