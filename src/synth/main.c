@@ -144,7 +144,7 @@ static void synth_audio_context_init(uint16_t sampleRate) {
     }
 
     for (int g = 0; g < GATES_LENGTH; g++) {
-        _context->gates[g].onDuration = 0;
+        _context->gates[g].onDuration = synth_envelope_to_duration(float2fix16(0.02f));
         _context->gates[g].offDuration = 0;
         _context->gates[g].state = OFF;
         _context->gates[g].remaining = 0;

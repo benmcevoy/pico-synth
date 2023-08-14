@@ -94,7 +94,7 @@ fix16 synth_envelope_gate(Gate_t* gate) {
     switch (gate->state) {
         case ATTACK:
             if (gate->remaining <= EPSILON) {
-                gate->duration = gate->onDuration >> 1;
+                gate->duration = gate->onDuration;
                 gate->remaining = gate->duration;
                 gate->state = SUSTAIN;
                 return FIX16_ONE;
@@ -130,7 +130,7 @@ fix16 synth_envelope_gate(Gate_t* gate) {
 
         case OFF:
             if (gate->remaining <= EPSILON) {
-                gate->duration = gate->onDuration >> 1;
+                gate->duration = gate->onDuration;
                 gate->remaining = gate->duration;
                 gate->state = ATTACK;
                 return 0;
