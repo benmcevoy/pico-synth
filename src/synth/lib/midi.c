@@ -12,19 +12,18 @@ static uint8_t _notePriority[16] = {0};
 static uint8_t _notePriorityIndex = 0;
 
 static void note_on(AudioContext_t* context, uint8_t note, uint8_t velocity) {
-    fix16 sustain = velocity << 9;
+    fix16 gain = velocity << 9;
     fix16 pitch = synth_midi_frequency_from_midi_note[note];
-
-    context->envelope.sustain = sustain;
 
     for (int i = 0; i < VOICES_LENGTH; i++) {
         Voice_t* voice = &context->voices[i];
 
+        voice->gain = gain;
         voice->frequency = pitch;
-        synth_audiocontext_set_wavetable_stride(voice, _sampleRate);
+        synth_audiocontext_set_wavetable_stride(voice);
     }
 
-    synth_envelope_note_on(context);
+    synth_envelope_note_on(&context->envelope);
 
     _notePriority[_notePriorityIndex] = note;
 
@@ -45,7 +44,7 @@ static void note_off(AudioContext_t* context, uint8_t note) {
     if (_notePriorityIndex > 0) _notePriorityIndex--;
 
     if (_notePriorityIndex == 0) {
-        synth_envelope_note_off(context);
+        synth_envelope_note_off(&context->envelope);
         return;
     }
 
@@ -56,7 +55,7 @@ static void note_off(AudioContext_t* context, uint8_t note) {
         Voice_t* voice = &context->voices[i];
 
         voice->frequency = pitch;
-        synth_audiocontext_set_wavetable_stride(voice, _sampleRate);
+        synth_audiocontext_set_wavetable_stride(voice);
     }
 }
 
@@ -65,8 +64,8 @@ void control_change(AudioContext_t* context, uint8_t command,
     switch (command) {
         case SYNTH_MIDI_CC_VOLUME: {
             // 7 bit number needs to end up in bits 9-15
-            fix16 volume = parameter << 9;
-            context->volume = volume;
+            fix16 value = parameter << 9;
+            context->gain = value;
             break;
         }
 
@@ -83,26 +82,17 @@ void control_change(AudioContext_t* context, uint8_t command,
         }
 
         case SYNTH_MIDI_CC_ATTACK: {
-            // only half range
-            fix16 value = parameter << 8;
-            context->gates[0].sustain = synth_envelope_to_duration(value);
             break;
         }
 
         case SYNTH_MIDI_CC_RELEASE: {
-            // only half range
-            fix16 value = parameter << 8;
-            context->gates[1].sustain = synth_envelope_to_duration(value);
             break;
         }
 
         case SYNTH_MIDI_CC_MODWHEEL: {
-            fix16 value = 64 + parameter << 9;
-            context->voices[0].detune = value;
-            synth_audiocontext_set_wavetable_stride(&context->voices[0],
-                                                    _sampleRate);
             break;
         }
+        
         default:
             break;
     }

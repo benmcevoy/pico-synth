@@ -8,6 +8,7 @@ add_executable(${projectName} main.c
     lib/circularbuffer.c
     lib/envelope.c
     lib/midi.c
+    lib/tempo.c
     lib/waveform.c)
 
 #pico_set_binary_type(${projectName} no_flash)

@@ -10,8 +10,10 @@
 #include "include/envelope.h"
 #include "include/fixedpoint.h"
 #include "include/ledblink.h"
+#include "include/metronome.h"
 #include "include/midi.h"
 #include "include/pitchtable.h"
+#include "include/tempo.h"
 #include "include/waveform.h"
 #include "pico/stdlib.h"
 #include "test.h"
@@ -29,7 +31,7 @@ static uint16_t _buffer1[BUFFER_LENGTH] = {0};
 static bool _swap = false;
 static int _pwmDmaChannel;
 static AudioContext_t* _context;
-static const fix16 MIXFACTOR = VOICES_LENGTH * FIX16_ONE;
+static fix16 MIXFACTOR = VOICES_LENGTH * FIX16_ONE;
 static int _bitDepth = 12;
 
 static void fill_write_buffer() {
@@ -41,12 +43,13 @@ static void fill_write_buffer() {
 
             fix16 sample = synth_waveform_sample(voice);
 
-            amplitude += sample;
+            amplitude += multfix16(voice->gain, sample);
         }
 
+        synth_tempo_process(&_context->tempo);
+
         // ***** ENVELOPE ******
-        // envelope modulation
-        fix16 envelope = synth_envelope_process(_context);
+        fix16 envelope = synth_envelope_process(&_context->envelope);
         amplitude = multfix16(amplitude, envelope);
         // *********************
 
@@ -57,38 +60,17 @@ static void fill_write_buffer() {
         synth_circularbuffer_write(amplitude, _context->delay);
         // *********************
 
-        // ******* GATE ********
-        fix16 tmp = 0;
-        for (int g = 0; g < GATES_LENGTH; g++) {
-            fix16 gate = synth_envelope_gate(&_context->gates[g]);
-            tmp += multfix16(gate, amplitude);
-        }
-        amplitude = tmp;
-        // *********************
+        amplitude += synth_metronome_process(&_context->tempo);
 
-        // **** MIX/COMPRESS ***
-        // mix/compress - tanh limits to -1..1 with a nice curve,
-        // quite an angry distort.  also the float is a performance hit.
+        // apply master gain
+        // i have preserved the mix as just summation
+        // gain can scale it down to avoid clipping
+        amplitude = multfix16(_context->gain, amplitude);
+
+        // compression, if the amplitude is with -1..1 then compress should not
+        // effect too much
+        // TODO: remove float
         amplitude = float2fix16(tanhf(fix2float16(amplitude)));
-
-        // mix/compress - average - theoretically no clipping or distortion,
-        // just quieter
-        // amplitude = divfix16(amplitude, MIXFACTOR);
-
-        // mix wet+dry
-        // wet and dry are two additional parameters
-        // the feedback value above would be
-        //
-        // fix16 feedback = multfix16(amplitude, dry) +
-        // multfix16(synth_circularbuffer_read(), wet);
-        //
-        // and the delay buffer would have the vlaue above written to it
-        // fix16 valueToWriteToDelayBuffer = amplitude +
-        // multfix16(synth_circularbuffer_read(), _context->delayGain);
-        // *********************
-
-        // apply master volume
-        amplitude = multfix16(_context->volume, amplitude);
 
         // scale to an "about 12" bit signal in a 16-bit container
         // the mix value is between -1..1
@@ -124,33 +106,25 @@ static void synth_audio_context_init(uint16_t sampleRate) {
     _context = malloc(sizeof(AudioContext_t));
 
     _context->samplesElapsed = 0;
-    _context->triggerAttack = false;
-    _context->volume = float2fix16(1);
-    _context->envelope.attack = synth_envelope_to_duration(float2fix16(0.05));
-    _context->envelope.decay = synth_envelope_to_duration(float2fix16(0.05f));
-    _context->envelope.sustain = float2fix16(0.5f);
-    _context->envelope.release = synth_envelope_to_duration(float2fix16(0.1f));
+    _context->gain = float2fix16(1);
     _context->delay = 0;
     _context->delayGain = 0;
 
+    _context->envelope.state = OFF;
+    _context->envelope.remaining = 0;
+    _context->envelope.duration = 0;
+    _context->envelope.triggerAttack = false;
+    _context->envelope.attack = synth_envelope_to_duration(float2fix16(0.05));
+    _context->envelope.decay = synth_envelope_to_duration(float2fix16(0.05f));
+    _context->envelope.sustain = float2fix16(0.5f);
+    _context->envelope.release = synth_envelope_to_duration(float2fix16(0.2f));
+
     for (int v = 0; v < VOICES_LENGTH; v++) {
+        _context->voices[v].gain = 0;
         _context->voices[v].frequency = PITCH_C3;
-        _context->voices[v].waveform = SINE;
+        _context->voices[v].waveform = TRIANGLE;
         _context->voices[v].detune = float2fix16(1 + v * 0.001);
-        synth_audiocontext_set_wavetable_stride(&_context->voices[v],
-                                                sampleRate);
-
-        printf("wts: %d \n", _context->voices[v].wavetableStride);
-    }
-
-    for (int g = 0; g < GATES_LENGTH; g++) {
-        _context->gates[g].attack = synth_envelope_to_duration(float2fix16(0.02f));
-        _context->gates[g].decay = synth_envelope_to_duration(float2fix16(0.02f));
-        _context->gates[g].release = synth_envelope_to_duration(float2fix16(0.02f));
-        _context->gates[g].sustain = 0;
-        _context->gates[g].state = OFF;
-        _context->gates[g].remaining = 0;
-        _context->gates[g].duration = 0;
+        synth_audiocontext_set_wavetable_stride(&_context->voices[v]);
     }
 }
 
@@ -161,8 +135,6 @@ static uint synth_pwm_init(uint16_t sampleRate) {
         frequency_count_khz(CLOCKS_FC0_SRC_VALUE_CLK_SYS) * 1000;
 
     uint16_t wrap = systemClockHz / sampleRate;
-    printf("wrap: %hu\n", wrap);
-
     _bitDepth = 16 - floorf(log2(wrap + 1.f));
 
     // setup pwm
@@ -209,37 +181,40 @@ static void synth_dma_init(uint slice) {
 
 void init_all() {
     synth_audio_context_init(_sampleRate);
+    synth_tempo_init(&_context->tempo, 120);
+    synth_metronome_init();
     synth_midi_init(_sampleRate);
     synth_circularbuffer_init();
     uint slice = synth_pwm_init(_sampleRate);
     synth_dma_init(slice);
-
-    printf("SampleRate: %d\n", _sampleRate);
 
 #ifdef USE_MIDI
     board_init();
     // init device stack on configured roothub port
     tud_init(BOARD_TUD_RHPORT);
 #endif
-
-    while (true) {
-#ifndef USE_MIDI
-        synth_test_play(_context);
-#else
-        tud_task();  // tinyusb device task
-        synth_led_blink_task();
-        synth_midi_task(_context);
-#endif
-    }
 }
 
 int main() {
     set_sys_clock_khz(240000, true);
     stdio_init_all();
+    init_all();
 
     printf("\n----------------------\nSynth starting.\n");
+    printf("sample rate: %d\n", _sampleRate);
+    printf("bit depth: %d\n", 16 - _bitDepth);
 
-    init_all();
+    while (true) {
+#ifndef USE_MIDI
+        synth_test_play(_context);
+#else
+        // TODO: move to core1
+        // tinyusb device task
+        tud_task();
+        synth_led_blink_task();
+        synth_midi_task(_context);
+#endif
+    }
 }
 
 // Invoked when device is mounted

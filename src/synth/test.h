@@ -22,43 +22,43 @@ static void set_frequency(AudioContext_t* context, fix16 f,
         Voice_t* voice = &context->voices[v];
         voice->frequency = f;
         voice->waveform = waveform;
-        synth_audiocontext_set_wavetable_stride(voice, SAMPLE_RATE);
+        synth_audiocontext_set_wavetable_stride(voice);
     }
 }
 
 void test_waveform(AudioContext_t* context, Waveform_t waveform) {
     set_frequency(context, PITCH_A4, waveform);
-    synth_envelope_note_on(context);
+    synth_envelope_note_on(&context->envelope);
     sleep_ms(500);
-    synth_envelope_note_off(context);
+    synth_envelope_note_off(&context->envelope);
     sleep_ms(300);
 
     set_frequency(context, PITCH_E4, waveform);
-    synth_envelope_note_on(context);
+    synth_envelope_note_on(&context->envelope);
     sleep_ms(500);
-    synth_envelope_note_off(context);
+    synth_envelope_note_off(&context->envelope);
     sleep_ms(300);
 
     set_frequency(context, PITCH_A5, waveform);
-    synth_envelope_note_on(context);
+    synth_envelope_note_on(&context->envelope);
     sleep_ms(500);
-    synth_envelope_note_off(context);
+    synth_envelope_note_off(&context->envelope);
     sleep_ms(300);
 
     set_frequency(context, PITCH_E4, waveform);
-    synth_envelope_note_on(context);
+    synth_envelope_note_on(&context->envelope);
     sleep_ms(500);
-    synth_envelope_note_off(context);
+    synth_envelope_note_off(&context->envelope);
     sleep_ms(300);
 }
 
 static void test_sweep(AudioContext_t* context, Waveform_t waveform) {
-    synth_envelope_note_on(context);
+    synth_envelope_note_on(&context->envelope);
     for (size_t i = PITCH_A4; i < PITCH_A5; i = i + 4) {
         sleep_ms(10);
         set_frequency(context, i, waveform);
     }
-    synth_envelope_note_off(context);
+    synth_envelope_note_off(&context->envelope);
     sleep_ms(120);
 }
 
@@ -69,9 +69,9 @@ static void test_pattern(AudioContext_t* context, Waveform_t waveform) {
         set_frequency(context,
                       frequency_from_reference_pitch(PITCH_C3, pattern[i]),
                       waveform);
-        synth_envelope_note_on(context);
+        synth_envelope_note_on(&context->envelope);
         sleep_ms(120);
-        synth_envelope_note_off(context);
+        synth_envelope_note_off(&context->envelope);
         sleep_ms(220);
     }
 }
@@ -87,18 +87,18 @@ static void test_midi_pattern(AudioContext_t* context, Waveform_t waveform) {
     for (int i = 0; i < sizeof(pattern); i++) {
         set_frequency(context, synth_midi_frequency_from_midi_note[pattern[i]],
                       waveform);
-        synth_envelope_note_on(context);
+        synth_envelope_note_on(&context->envelope);
         sleep_ms(120);
-        synth_envelope_note_off(context);
+        synth_envelope_note_off(&context->envelope);
         sleep_ms(120);
     }
 }
 
 void synth_test_play(AudioContext_t* context) {
     set_frequency(context, PITCH_C4, context->voices[0].waveform);
-    synth_envelope_note_on(context);
+    synth_envelope_note_on(&context->envelope);
     sleep_ms(1000);
-    synth_envelope_note_off(context);
+    synth_envelope_note_off(&context->envelope);
     sleep_ms(1200);
 
     test_pattern(context, context->voices[0].waveform);

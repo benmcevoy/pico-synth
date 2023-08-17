@@ -11,6 +11,9 @@
 #define FIX16_PI 205887
 #define FIX16_TWOPI 411774
 
+// TODO: hardware support is for 32x32 with a 32 bit result so we should
+// get better performance with int16_t fix14 2.14dp or something
+// this means anything using the sample rate probably has to now be uint32_t or similar
 // fixed point 16.16dp
 typedef int32_t fix16;
 #define multfix16(a, b) ((fix16)((((int64_t)(a)) * ((int64_t)(b))) >> 16))
