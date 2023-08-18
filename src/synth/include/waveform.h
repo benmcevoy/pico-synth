@@ -3,7 +3,7 @@
 
 #include "audiocontext.h"
 
-// TODO: DRY wrt filter.h & why can't I use math.h for this?
+// TODO: why can't I use math.h for this?
 #ifndef M_PI
 #define M_PI 3.14159265358979323846f
 #endif
@@ -16,6 +16,8 @@
  * \param context The audio context
  */
 fix16 synth_waveform_sample(Voice_t* context);
+
+fix16 synth_waveform_noise();
 
 static fix16 SineWaveTable[WAVE_TABLE_LENGTH] = {
     0,      804,    1608,   2412,   3215,   4018,   4821,   5622,   6423,

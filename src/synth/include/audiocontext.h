@@ -17,7 +17,7 @@
 #define SAMPLE_RATE 32767
 #define FIX16_SAMPLE_RATE 2147418112
 #define BUFFER_LENGTH 64
-#define VOICES_LENGTH 30
+#define VOICES_LENGTH 2
 
 // TODO: this is not a reasonable place to park this code
 static fix16 lerp(fix16 fraction, fix16 start, fix16 end) {
@@ -37,7 +37,7 @@ typedef enum EnvelopeState {
 typedef struct Envelope {
     bool triggerAttack;
     EnvelopeState_t state;
-    fix16 remaining;
+    fix16 elapsed;
     fix16 duration;
     fix16 envelope;
 
@@ -78,6 +78,10 @@ typedef struct AudioContext {
 static void synth_audiocontext_set_wavetable_stride(Voice_t* voice) {
     voice->wavetableStride =
         divfix16(multfix16(voice->frequency, voice->detune), FIX16_SAMPLE_RATE);
+}
+
+static fix16 synth_audiocontext_to_duration(float value) {
+    return multfix16(float2fix16(value), FIX16_SAMPLE_RATE);
 }
 
 #endif

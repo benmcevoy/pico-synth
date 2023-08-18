@@ -13,9 +13,9 @@ static fix16 read_from_wt(Voice_t* voice, fix16* waveTable) {
 
     if (indexAbove >= WAVE_TABLE_LENGTH) indexAbove -= WAVE_TABLE_LENGTH;
 
-    fix16 fractionAbove = voice->waveTableReadPointer - int2fix16(indexBelow);
+    fix16 fraction = voice->waveTableReadPointer - int2fix16(indexBelow);
     fix16 value =
-        lerp(fractionAbove, waveTable[indexBelow], waveTable[indexAbove]);
+        lerp(fraction, waveTable[indexBelow], waveTable[indexAbove]);
 
     voice->waveTableReadPointer +=
         multfix16(FIX16_WAVE_TABLE_LENGTH, voice->wavetableStride);
@@ -39,7 +39,7 @@ static fix16 square(Voice_t* voice) {
 }
 
 // https://en.wikipedia.org/wiki/Xorshift
-static fix16 noise(Voice_t* voice) {
+fix16 synth_waveform_noise() {
     _seed ^= (_seed << a);
     _seed ^= (_seed >> b);
     _seed ^= (_seed << c);
@@ -58,7 +58,7 @@ fix16 synth_waveform_sample(Voice_t* voice) {
         case TRIANGLE:
             return read_from_wt(voice, TriangleWaveTable);
         case NOISE:
-            return noise(voice);
+            return synth_waveform_noise();
 
         default:
             return 0;

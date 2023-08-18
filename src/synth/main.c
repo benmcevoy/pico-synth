@@ -15,6 +15,7 @@
 #include "include/pitchtable.h"
 #include "include/tempo.h"
 #include "include/waveform.h"
+#include "pico/multicore.h"
 #include "pico/stdlib.h"
 #include "test.h"
 #include "tusb.h"
@@ -31,8 +32,50 @@ static uint16_t _buffer1[BUFFER_LENGTH] = {0};
 static bool _swap = false;
 static int _pwmDmaChannel;
 static AudioContext_t* _context;
-static fix16 MIXFACTOR = VOICES_LENGTH * FIX16_ONE;
 static int _bitDepth = 12;
+
+fix16 _previousDither = 0;
+static fix16 dither() {
+    // mask off the bottom 8 bits
+    uint8_t p = synth_waveform_noise() & 0x00000ff;
+
+    // TODO: not sure abouth this.  guide is to use 2 LSB of dither
+    // not sure if that is 2 LSB on this 32 bit number or on the 12 bit quantized value later?
+    // I *think* this setting of _bitDepth + 3 sounds better? but I could be deluding myself
+    // I looked at some frequency spectrums with this on/off and various settings
+    // the noise floor is raised and skewed to higher frequency
+    // might be more noticeable with I2S .  have to wait and see.
+    uint8_t depth = _bitDepth + 3;
+    fix16 dither;
+
+    // these numbers were derived by pissing around in a spreadsheet
+    // apply triangular probability
+    if (p < 4) dither = -57344 >> depth;            
+    else if (p < 11) dither = -49152 >> depth;      
+    else if (p < 21) dither = -40960 >> depth;
+    else if (p < 36) dither = -32768 >> depth;
+    else if (p < 53) dither = -24576 >> depth;
+    else if (p < 75) dither = -16384 >> depth;
+    else if (p < 100) dither = -8192 >> depth;
+    // from here (>=100)
+    else if (p < 128) dither = 0;
+    else if (p < 156) dither = 0;
+    // to the above accounts for about 22% (56/256)
+    else if (p < 181) dither = 8192 >> depth;
+    else if (p < 203) dither = 16384 >> depth;
+    else if (p < 220) dither = 24576 >> depth;
+    else if (p < 235) dither = 32768 >> depth;
+    else if (p < 245) dither = 40960 >> depth;
+    else if (p < 252) dither = 49152 >> depth;
+    else if (p < 256) dither = 57344 >> depth;
+
+    // noise shaping
+    fix16 result = dither - _previousDither;
+
+    _previousDither = dither;
+
+    return result;
+}
 
 static void fill_write_buffer() {
     for (int i = 0; i < BUFFER_LENGTH; i++) {
@@ -66,6 +109,13 @@ static void fill_write_buffer() {
         // i have preserved the mix as just summation
         // gain can scale it down to avoid clipping
         amplitude = multfix16(_context->gain, amplitude);
+       
+        // TODO: not sure I need to introduce noise when I use a breadboard :)
+        // if/when I can get control of the sample rate/bit depth again
+        // i'll drop it down to 8 or 6 bits (thanks Tony)
+        // and hopefully the effect will be more obvious
+        // currently I cannot tell the difference
+        //amplitude += dither(amplitude);
 
         // compression, if the amplitude is with -1..1 then compress should not
         // effect too much
@@ -102,40 +152,14 @@ static void __isr __time_critical_func(dma_irq_handler)() {
     fill_write_buffer();
 }
 
-static void synth_audio_context_init(uint16_t sampleRate) {
-    _context = malloc(sizeof(AudioContext_t));
-
-    _context->samplesElapsed = 0;
-    _context->gain = float2fix16(1);
-    _context->delay = 0;
-    _context->delayGain = 0;
-
-    _context->envelope.state = OFF;
-    _context->envelope.remaining = 0;
-    _context->envelope.duration = 0;
-    _context->envelope.triggerAttack = false;
-    _context->envelope.attack = synth_envelope_to_duration(float2fix16(0.05));
-    _context->envelope.decay = synth_envelope_to_duration(float2fix16(0.05f));
-    _context->envelope.sustain = float2fix16(0.5f);
-    _context->envelope.release = synth_envelope_to_duration(float2fix16(0.2f));
-
-    for (int v = 0; v < VOICES_LENGTH; v++) {
-        _context->voices[v].gain = 0;
-        _context->voices[v].frequency = PITCH_C3;
-        _context->voices[v].waveform = TRIANGLE;
-        _context->voices[v].detune = float2fix16(1 + v * 0.001);
-        synth_audiocontext_set_wavetable_stride(&_context->voices[v]);
-    }
-}
-
 static uint synth_pwm_init(uint16_t sampleRate) {
     // derive clk_div and wrap
-    // set clk_div =1
+    // keep clk_div at 1
     uint systemClockHz =
         frequency_count_khz(CLOCKS_FC0_SRC_VALUE_CLK_SYS) * 1000;
 
     uint16_t wrap = systemClockHz / sampleRate;
-    _bitDepth = 16 - floorf(log2(wrap + 1.f));
+    _bitDepth = 16 - floorf(log2f(wrap + 1));
 
     // setup pwm
     gpio_set_function(PIN, GPIO_FUNC_PWM);
@@ -179,6 +203,35 @@ static void synth_dma_init(uint slice) {
     irq_set_enabled(DMA_IRQ_0, true);
 }
 
+static void synth_audio_context_init(uint16_t sampleRate) {
+    _context = malloc(sizeof(AudioContext_t));
+
+    _context->samplesElapsed = 0;
+    _context->gain = float2fix16(1);
+    _context->delay = 0;
+    _context->delayGain = 0;
+
+    _context->envelope.state = OFF;
+    _context->envelope.elapsed = 0;
+    _context->envelope.duration = 0;
+    _context->envelope.triggerAttack = false;
+    _context->envelope.attack = synth_audiocontext_to_duration(0.05);
+    _context->envelope.decay = synth_audiocontext_to_duration(0.05f);
+    _context->envelope.sustain = float2fix16(0.5f);
+    _context->envelope.release = synth_audiocontext_to_duration(0.2f);
+
+    for (int v = 0; v < VOICES_LENGTH; v++) {
+        _context->voices[v].gain = float2fix16(0.5f);
+        _context->voices[v].frequency = PITCH_C3;
+        _context->voices[v].waveform = SAW;
+        _context->voices[v].detune = float2fix16(1 + v * 0.001);
+        synth_audiocontext_set_wavetable_stride(&_context->voices[v]);
+    }
+
+    // fat detune drop octave
+    //_context->voices[1].detune = float2fix16(0.5);
+}
+
 void init_all() {
     synth_audio_context_init(_sampleRate);
     synth_tempo_init(&_context->tempo, 120);
@@ -194,6 +247,18 @@ void init_all() {
     tud_init(BOARD_TUD_RHPORT);
 #endif
 }
+void core1_worker() {
+    while (true) {
+#ifndef USE_MIDI
+        synth_test_play(_context);
+#else
+        // tinyusb device task
+        tud_task();
+        synth_led_blink_task();
+        synth_midi_task(_context);
+#endif
+    }
+}
 
 int main() {
     set_sys_clock_khz(240000, true);
@@ -204,17 +269,9 @@ int main() {
     printf("sample rate: %d\n", _sampleRate);
     printf("bit depth: %d\n", 16 - _bitDepth);
 
-    while (true) {
-#ifndef USE_MIDI
-        synth_test_play(_context);
-#else
-        // TODO: move to core1
-        // tinyusb device task
-        tud_task();
-        synth_led_blink_task();
-        synth_midi_task(_context);
-#endif
-    }
+    // multicore_launch_core1(core1_worker);
+    core1_worker();
+    while (true) tight_loop_contents();
 }
 
 // Invoked when device is mounted

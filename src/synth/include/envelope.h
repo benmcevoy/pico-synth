@@ -4,8 +4,6 @@
 #include "audiocontext.h"
 #include "fixedpoint.h"
 
-fix16 synth_envelope_to_duration(fix16 value);
-
 fix16 synth_envelope_process(Envelope_t* envelope);
 
 void synth_envelope_note_on(Envelope_t* envelope);

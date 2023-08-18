@@ -6,8 +6,18 @@
 #include "tempo.h"
 #include "waveform.h"
 
-static Voice_t _voice;
-static Envelope_t _envelope;
+static Voice_t _voice = {.detune = FIX16_ONE,
+                         .frequency = PITCH_A4,
+                         .gain = float2fix16(0.3f),
+                         .waveform = SINE};
+
+static Envelope_t _envelope = {.attack = 0,
+                               .decay = 0,
+                               .sustain = FIX16_ONE,
+                               .release = 0,
+                               .state = OFF,
+                               .triggerAttack = false,
+                               .envelope = FIX16_ONE};
 
 fix16 synth_metronome_process(Tempo_t* tempo) {
     fix16 sample = synth_waveform_sample(&_voice);
@@ -21,19 +31,8 @@ fix16 synth_metronome_process(Tempo_t* tempo) {
 }
 
 void synth_metronome_init() {
-    _voice.detune = FIX16_ONE;
-    _voice.frequency = PITCH_A4;
-    _voice.gain = float2fix16(0.75f);
-    _voice.waveform = SINE;
     synth_audiocontext_set_wavetable_stride(&_voice);
-
-    _envelope.attack = synth_envelope_to_duration(0);
-    _envelope.decay = synth_envelope_to_duration(0);
-    _envelope.sustain = FIX16_ONE;
-    _envelope.release = synth_envelope_to_duration(float2fix16(0.1));
-    _envelope.state = OFF;
-    _envelope.triggerAttack = false;
-    _envelope.envelope = FIX16_ONE;
+    _envelope.release = synth_audiocontext_to_duration(0.1f);
 }
 
 #endif

@@ -1267,5 +1267,18 @@ give it a clock in MHz and convert to the result to kHz.
 
 The flash memory becomes unstable over 300MHz.  There are some cmake settings you can use to set the SPI clock divider.  I did not try too hard.
 
+# TODO:
+
+losing the plot
+
+- the cortex m0+ has a hardware multipler and divider `MULS` but it is 32x32 bits with a 32 bit result. Use 16 bit fixed point and try and use straight integer more, especially for durations as they are really just "how may samples do i wait"
+- implement usb host for midi (see: https://github.com/rppicomidi/midi2usbhost)
+- move the I/O polling to core1
+- implement arp
+- revisit instrument design
+- move this to a hardware design - knobs! analog multiplexer! blinky leds! I kinda want to use a LED matrix and have some ridiculous colors and patterns playing too. might need another pico driving a hub75 board or something.
+- review/steal (sorry "be inspired by") from https://github.com/juandagilc/Audio-Effects/tree/master and https://github.com/PaulStoffregen/Audio
+
+
 
 

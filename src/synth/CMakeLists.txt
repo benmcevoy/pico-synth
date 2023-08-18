@@ -33,6 +33,7 @@ target_link_libraries(${projectName} PUBLIC
     hardware_dma 
     tinyusb_device 
     tinyusb_board
+    pico_multicore
     pico_unique_id)
 
 
