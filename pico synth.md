@@ -31,7 +31,7 @@ if you just run cmake it makes an awful mess
 
 i don't really know what i'm doing...
 
-grabbed the exmaple base cmake.txt and sdk import files as the basis
+grabbed the example base cmake.txt and sdk import files as the basis
 
 set the project to synth
 
@@ -1252,7 +1252,10 @@ Do this before `stdio_init_all();`  or you must call `setup_default_uart()` afte
 
 Not all clock frequencies work - there is a python script in the sdk:  `python3 vcocalc.py 240`
 
-`/pico-sdk/src/rp2_common/hardware_clocks/scripts$ python3 vcocalc.py 240`
+```
+cd ./pico-sdk/src/rp2_common/hardware_clocks/scripts 
+python3 vcocalc.py 240
+```
 
 ```sh
 Requested: 240.0 MHz
@@ -1273,6 +1276,7 @@ losing the plot
 
 - the cortex m0+ has a hardware multipler and divider `MULS` but it is 32x32 bits with a 32 bit result. Use 16 bit fixed point and try and use straight integer more, especially for durations as they are really just "how may samples do i wait"
 - implement usb host for midi (see: https://github.com/rppicomidi/midi2usbhost)
+- move the I/O polling to core1idi2usbhost)
 - move the I/O polling to core1
 - implement arp
 - revisit instrument design

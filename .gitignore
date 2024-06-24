@@ -10,7 +10,9 @@ src/build/
 nohup.out
 .envrc
 
-!src/build/synth.uf2
-!src/build/synth.elf
-!src/build/monitor.sh
-!src/build/deploy.sh
+!src/build/synth/synth.uf2
+!src/build/synth/synth.elf
+!src/build/synth/deploy.sh
+!src/build/controller/controller.uf2
+!src/build/controller/controller.elf
+!src/build/controller/deploy.sh

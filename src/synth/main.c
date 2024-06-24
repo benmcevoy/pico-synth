@@ -24,7 +24,7 @@
 #define PIN 26
 
 // uncomment to use midi or comment out for the test code
-#define USE_MIDI
+//#define USE_MIDI
 
 static uint16_t _sampleRate = SAMPLE_RATE;
 static uint16_t _buffer0[BUFFER_LENGTH] = {0};
