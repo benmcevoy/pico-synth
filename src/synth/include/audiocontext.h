@@ -20,7 +20,7 @@
 #define VOICES_LENGTH 2
 
 // TODO: this is not a reasonable place to park this code
-static fix16 lerp(fix16 fraction, fix16 start, fix16 end) {
+static inline fix16 lerp(fix16 fraction, fix16 start, fix16 end) {
     return fraction >= FIX16_ONE ? end
                                  : start + multfix16(fraction, (end - start));
 }
@@ -75,12 +75,12 @@ typedef struct AudioContext {
     Envelope_t envelope;
 } AudioContext_t;
 
-static void synth_audiocontext_set_wavetable_stride(Voice_t* voice) {
+static inline void synth_audiocontext_set_wavetable_stride(Voice_t* voice) {
     voice->wavetableStride =
         divfix16(multfix16(voice->frequency, voice->detune), FIX16_SAMPLE_RATE);
 }
 
-static fix16 synth_audiocontext_to_duration(float value) {
+static inline fix16 synth_audiocontext_to_duration(float value) {
     return multfix16(float2fix16(value), FIX16_SAMPLE_RATE);
 }
 

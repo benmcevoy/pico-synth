@@ -6,7 +6,9 @@ set(TINYUSB_FAMILY_PROJECT_NAME_PREFIX "tinyusb_dev_")
 add_executable(${projectName} main.c 
     usb_descriptors.c
     lib/circularbuffer.c
+    lib/controller.c
     lib/envelope.c
+    lib/mcp3008.c
     lib/midi.c
     lib/tempo.c
     lib/waveform.c)
@@ -31,6 +33,7 @@ target_link_libraries(${projectName} PUBLIC
     pico_stdlib 
     hardware_pwm 
     hardware_dma 
+    hardware_spi
     tinyusb_device 
     tinyusb_board
     pico_multicore

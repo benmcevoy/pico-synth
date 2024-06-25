@@ -101,8 +101,8 @@ void control_change(AudioContext_t* context, uint8_t command,
 static void process_midi_command(AudioContext_t* context, uint8_t packet[4]) {
     uint8_t command = packet[1] & 0b11110000;
 
-    // printf("midi: %d %d %d %d %d\n", command,
-    // packet[0],packet[1],packet[2],packet[3]);
+     printf("midi: %d %d %d %d %d\n", command,
+     packet[0],packet[1],packet[2],packet[3]);
 
     switch (command) {
         case SYNTH_MIDI_NOTEON:
@@ -112,7 +112,7 @@ static void process_midi_command(AudioContext_t* context, uint8_t packet[4]) {
             note_off(context, packet[2]);
             break;
         case SYNTH_MIDI_CC:
-            control_change(context, packet[2], packet[3]);
+            //control_change(context, packet[2], packet[3]);
             break;
     }
 }
