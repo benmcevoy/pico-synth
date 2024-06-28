@@ -4,9 +4,26 @@
 #include <stdint.h>
 #include "audiocontext.h"
 
-typedef struct Control {
+typedef enum { 
+    ACTION_NONE = 0, 
+    
+    ACTION_DELAY, 
+    ACTION_DELAYGAIN, 
+    
+    ACTION_DETUNE, 
+    ACTION_WIDTH, 
+    
+    ACTION_LEVEL, 
+    ACTION_ATTACK,
+    ACTION_DECAY,
+    ACTION_SUSTAIN,
+    ACTION_RELEASE
+     } control_action_t;
+
+typedef struct {
     uint8_t channel;
     uint16_t value;
+    control_action_t action;
 } control_t;
 
 extern control_t* controls;

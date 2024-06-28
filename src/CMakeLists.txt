@@ -17,7 +17,7 @@ pico_sdk_init()
 
 # Add Synth
 add_subdirectory(synth)
-add_subdirectory(controller)
+
 
 add_compile_options(-Wall
         -Wno-format          # int != int32_t as far as the compiler is concerned because gcc has int32_t as long int

@@ -34,10 +34,11 @@ target_link_libraries(${projectName} PUBLIC
     hardware_pwm 
     hardware_dma 
     hardware_spi
-    tinyusb_device 
     tinyusb_board
+    tinyusb_device
     pico_multicore
-    pico_unique_id)
+    pico_unique_id
+    )
 
 
 # create map/bin/hex/uf2 file etc.

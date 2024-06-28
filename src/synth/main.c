@@ -8,10 +8,10 @@
 #include "hardware/pwm.h"
 #include "include/audiocontext.h"
 #include "include/circularbuffer.h"
+#include "include/controller.h"
 #include "include/envelope.h"
 #include "include/fixedpoint.h"
 #include "include/ledblink.h"
-#include "include/controller.h"
 #include "include/metronome.h"
 #include "include/midi.h"
 #include "include/pitchtable.h"
@@ -27,14 +27,17 @@
 
 // uncomment to use midi or comment out for the test code
 #define USE_MIDI
+//#define USE_METRONOME
 
-static uint16_t _sampleRate = SAMPLE_RATE;
-static uint16_t _buffer0[BUFFER_LENGTH] = {0};
-static uint16_t _buffer1[BUFFER_LENGTH] = {0};
-static bool _swap = false;
-static int _pwmDmaChannel;
-static AudioContext_t* _context;
-static int _bitDepth = 12;
+static uint16_t buffer0[BUFFER_LENGTH] = {0};
+static uint16_t buffer1[BUFFER_LENGTH] = {0};
+static bool swap = false;
+static int pwm_dma_channel;
+static AudioContext_t* context;
+static int bit_depth = 12;
+
+
+static uint8_t midi_dev_addr = 0;
 
 fix16 _previousDither = 0;
 static fix16 dither() {
@@ -47,7 +50,7 @@ static fix16 dither() {
   // could be deluding myself I looked at some frequency spectrums with this
   // on/off and various settings the noise floor is raised and skewed to higher
   // frequency might be more noticeable with I2S .  have to wait and see.
-  uint8_t depth = _bitDepth + 3;
+  uint8_t depth = bit_depth + 3;
   fix16 dither;
 
   // these numbers were derived by pissing around in a spreadsheet
@@ -100,33 +103,36 @@ static void fill_write_buffer() {
     fix16 amplitude = 0;
 
     for (int v = 0; v < VOICES_LENGTH; v++) {
-      Voice_t* voice = &_context->voices[v];
+      Voice_t* voice = &context->voices[v];
 
       fix16 sample = synth_waveform_sample(voice);
 
       amplitude += multfix16(voice->gain, sample);
     }
 
-    synth_tempo_process(&_context->tempo);
+    synth_tempo_process(&context->tempo);
 
     // ***** ENVELOPE ******
-    fix16 envelope = synth_envelope_process(&_context->envelope);
+    fix16 envelope = synth_envelope_process(&context->envelope);
     amplitude = multfix16(amplitude, envelope);
     // *********************
 
     // **** DELAY/ECHO *****
     // apply feedback
-    amplitude =
-        amplitude + multfix16(synth_circularbuffer_read(), _context->delayGain);
-    synth_circularbuffer_write(amplitude, _context->delay);
+    amplitude = amplitude +
+                multfix16(multfix16(synth_circularbuffer_read(), FIX16_POINT_7),
+                          context->delayGain);
+    synth_circularbuffer_write(amplitude, context->delay);
     // *********************
 
-    amplitude += synth_metronome_process(&_context->tempo);
+#ifdef USE_METRONOME
+    amplitude += synth_metronome_process(&context->tempo);
+#endif
 
     // apply master gain
     // i have preserved the mix as just summation
     // gain can scale it down to avoid clipping
-    amplitude = multfix16(_context->gain, amplitude);
+    amplitude = multfix16(context->gain, amplitude);
 
     // TODO: not sure I need to introduce noise when I use a breadboard :)
     // if/when I can get control of the sample rate/bit depth again
@@ -147,25 +153,25 @@ static void fill_write_buffer() {
     // need to scale to the bit depth as determined by the wrap calulated on
     // init
     amplitude = amplitude + FIX16_ONE;
-    uint16_t out = (uint16_t)(amplitude >> _bitDepth);
+    uint16_t out = (uint16_t)(amplitude >> bit_depth);
 
     // final volume
-    _context->envelope.envelope = envelope;
-    _context->audioOut[i] = out;
-    _context->samplesElapsed++;
+    context->envelope.envelope = envelope;
+    context->audioOut[i] = out;
+    context->samplesElapsed++;
   }
 }
 
 static void __isr __time_critical_func(dma_irq_handler)() {
   // cycle buffers
-  _context->audioOut = _swap ? _buffer0 : _buffer1;
-  _swap = !_swap;
+  context->audioOut = swap ? buffer0 : buffer1;
+  swap = !swap;
 
   // ack irq
-  dma_hw->ints0 = 1u << _pwmDmaChannel;
+  dma_hw->ints0 = 1u << pwm_dma_channel;
   // restart DMA
-  dma_channel_transfer_from_buffer_now(
-      _pwmDmaChannel, _swap ? _buffer0 : _buffer1, BUFFER_LENGTH);
+  dma_channel_transfer_from_buffer_now(pwm_dma_channel,
+                                       swap ? buffer0 : buffer1, BUFFER_LENGTH);
 
   fill_write_buffer();
 }
@@ -176,7 +182,7 @@ static uint synth_pwm_init(uint16_t sampleRate) {
   uint systemClockHz = frequency_count_khz(CLOCKS_FC0_SRC_VALUE_CLK_SYS) * 1000;
 
   uint16_t wrap = systemClockHz / sampleRate;
-  _bitDepth = 16 - floorf(log2f(wrap + 1));
+  bit_depth = 16 - floorf(log2f(wrap + 1));
 
   // setup pwm
   gpio_set_function(PWM_PIN, GPIO_FUNC_PWM);
@@ -187,7 +193,7 @@ static uint synth_pwm_init(uint16_t sampleRate) {
   // set sample rate/clock to 125Mhz / wrap+1 / div =   ~22kHz
   // rp2040 datasheet gives the actual formula
 
-  pwm_config_set_clkdiv(&pwmConfig, 1);
+  pwm_config_set_clkdiv(&pwmConfig, 1.f);
   pwm_config_set_wrap(&pwmConfig, wrap);
   // pwm_config_set_phase_correct(&pwmConfig, true);
   pwm_init(slice, &pwmConfig, true);
@@ -197,9 +203,10 @@ static uint synth_pwm_init(uint16_t sampleRate) {
 
 static void synth_dma_init(uint slice) {
   // setup dma
-  _pwmDmaChannel = dma_claim_unused_channel(true);
+  pwm_dma_channel = dma_claim_unused_channel(true);
 
-  dma_channel_config dmaConfig = dma_channel_get_default_config(_pwmDmaChannel);
+  dma_channel_config dmaConfig =
+      dma_channel_get_default_config(pwm_dma_channel);
   // must be 16 bits
   channel_config_set_transfer_data_size(&dmaConfig, DMA_SIZE_16);
   channel_config_set_read_increment(&dmaConfig, true);
@@ -207,73 +214,77 @@ static void synth_dma_init(uint slice) {
   channel_config_set_dreq(&dmaConfig, DREQ_PWM_WRAP0 + slice);
 
   dma_channel_configure(
-      _pwmDmaChannel, &dmaConfig,
+      pwm_dma_channel, &dmaConfig,
       &pwm_hw->slice[slice].cc,  // Write to PWM counter compare
-      &_buffer0,                 // read from buffer
+      &buffer0,                  // read from buffer
       BUFFER_LENGTH,             // number of transfers to perform
       true                       // start
   );
 
-  dma_channel_set_irq0_enabled(_pwmDmaChannel, true);
+  dma_channel_set_irq0_enabled(pwm_dma_channel, true);
   irq_set_exclusive_handler(DMA_IRQ_0, dma_irq_handler);
   irq_set_enabled(DMA_IRQ_0, true);
 }
 
 static void synth_audio_context_init(uint16_t sampleRate) {
-  _context = malloc(sizeof(AudioContext_t));
+  context = malloc(sizeof(AudioContext_t));
 
-  _context->samplesElapsed = 0;
-  _context->gain = float2fix16(1);
-  _context->delay = 0;
-  _context->delayGain = 0;
+  context->samplesElapsed = 0;
+  context->gain = float2fix16(1);
+  context->delay = 0;
+  context->delayGain = 0;  // float2fix16(0.1f);
 
-  _context->envelope.state = OFF;
-  _context->envelope.elapsed = 0;
-  _context->envelope.duration = 0;
-  _context->envelope.triggerAttack = false;
-  _context->envelope.attack = synth_audiocontext_to_duration(0.05);
-  _context->envelope.decay = synth_audiocontext_to_duration(0.05f);
-  _context->envelope.sustain = float2fix16(0.5f);
-  _context->envelope.release = synth_audiocontext_to_duration(0.2f);
+  context->envelope.state = OFF;
+  context->envelope.elapsed = 0;
+  context->envelope.duration = 0;
+  context->envelope.triggerAttack = false;
+  context->envelope.attack = synth_audiocontext_to_duration(0.05);
+  context->envelope.decay = synth_audiocontext_to_duration(0.05f);
+  context->envelope.sustain = float2fix16(0.5f);
+  context->envelope.release = synth_audiocontext_to_duration(0.2f);
 
   for (int v = 0; v < VOICES_LENGTH; v++) {
-    _context->voices[v].gain = float2fix16(0.5f);
-    _context->voices[v].frequency = PITCH_C3;
-    _context->voices[v].waveform = SAW;
-    _context->voices[v].detune = float2fix16(1 + v * 0.001);
-    synth_audiocontext_set_wavetable_stride(&_context->voices[v]);
+    context->voices[v].gain = float2fix16(0.5f);
+    context->voices[v].frequency = PITCH_C3;
+    context->voices[v].waveform = SQUARE;
+    context->voices[v].detune = 0;
+    synth_audiocontext_set_wavetable_stride(&context->voices[v]);
   }
-
-  // fat detune drop octave
-  //_context->voices[1].detune = float2fix16(0.5);
 }
 
 void init_all() {
-  synth_audio_context_init(_sampleRate);
-  synth_tempo_init(&_context->tempo, 120);
+  synth_audio_context_init(SAMPLE_RATE);
+  synth_tempo_init(&context->tempo, 120);
   synth_metronome_init();
-  synth_midi_init(_sampleRate);
+  synth_midi_init(SAMPLE_RATE);
   synth_circularbuffer_init();
-  uint slice = synth_pwm_init(_sampleRate);
+  uint slice = synth_pwm_init(SAMPLE_RATE);
   synth_dma_init(slice);
-  synth_controller_init(_sampleRate);
+  synth_controller_init(SAMPLE_RATE);
 
 #ifdef USE_MIDI
   board_init();
-  // init device stack on configured roothub port
+
+  // init usb device 
   tud_init(BOARD_TUD_RHPORT);
+
+  // read to initialise to the state of the physical controls
+  synth_controller_task(context);
 #endif
 }
+
 void core1_worker() {
   while (true) {
 #ifndef USE_MIDI
-    synth_test_play(_context);
+    // TODO: the player has a load of sleeps so the controller does not update
+    // synth_controller_task(context);
+    synth_test_play(context);
 #else
     // tinyusb device task
     tud_task();
     synth_led_blink_task();
-    synth_controller_task(_context);
-    synth_midi_task(_context);
+    synth_controller_task(context);
+    synth_midi_task(context);
 #endif
   }
 }
@@ -284,10 +295,9 @@ int main() {
   stdio_init_all();
   init_all();
 
-
   printf("\n----------------------\nSynth starting.\n");
-  printf("sample rate: %d\n", _sampleRate);
-  printf("bit depth: %d\n", 16 - _bitDepth);
+  printf("sample rate: %d\n", SAMPLE_RATE);
+  printf("bit depth: %d\n", 16 - bit_depth);
 
   // multicore_launch_core1(core1_worker);
   // midi
@@ -297,20 +307,3 @@ int main() {
     tight_loop_contents();
   }
 }
-
-// Invoked when device is mounted
-void tud_mount_cb(void) { synth_led_blink_interval_ms = BLINK_MOUNTED; }
-
-// Invoked when device is unmounted
-void tud_umount_cb(void) { synth_led_blink_interval_ms = BLINK_NOT_MOUNTED; }
-
-// Invoked when usb bus is suspended
-// remote_wakeup_en : if host allow us  to perform remote wakeup
-// Within 7ms, device must draw an average of current less than 2.5 mA from bus
-void tud_suspend_cb(bool remote_wakeup_en) {
-  (void)remote_wakeup_en;
-  synth_led_blink_interval_ms = BLINK_SUSPENDED;
-}
-
-// Invoked when usb bus is resumed
-void tud_resume_cb(void) { synth_led_blink_interval_ms = BLINK_MOUNTED; }
