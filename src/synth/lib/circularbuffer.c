@@ -6,24 +6,24 @@
 // malloc when initialised
 #define CIRCULARBUFFER_WRAP SAMPLE_RATE
 
-static fix16 _buffer[CIRCULARBUFFER_WRAP] = {};
-static int _readPointer;
-static int _writePointer;
+static fix16 buffer[CIRCULARBUFFER_WRAP] = {};
+static int readPointer;
+static int writePointer;
 
 void synth_circularbuffer_init() {
-    _writePointer = 0;
-    _readPointer = 0;
+    writePointer = 0;
+    readPointer = 0;
 }
 
-fix16 synth_circularbuffer_read() { return _buffer[_readPointer]; }
+fix16 synth_circularbuffer_read() { return buffer[readPointer]; }
 
 void synth_circularbuffer_write(fix16 value, uint16_t delay) {
-    _writePointer++;
-    if (_writePointer >= CIRCULARBUFFER_WRAP) _writePointer = 0;
+    writePointer++;
+    if (writePointer >= CIRCULARBUFFER_WRAP) writePointer = 0;
 
-    _readPointer = _writePointer - delay;
-    while (_readPointer >= CIRCULARBUFFER_WRAP) _readPointer -= CIRCULARBUFFER_WRAP;
-    while (_readPointer < 0) _readPointer += CIRCULARBUFFER_WRAP;
+    readPointer = writePointer - delay;
+    while (readPointer >= CIRCULARBUFFER_WRAP) readPointer -= CIRCULARBUFFER_WRAP;
+    while (readPointer < 0) readPointer += CIRCULARBUFFER_WRAP;
 
-    _buffer[_writePointer] = value;
+    buffer[writePointer] = value;
 }

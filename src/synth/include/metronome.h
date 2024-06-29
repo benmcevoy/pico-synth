@@ -6,33 +6,33 @@
 #include "tempo.h"
 #include "waveform.h"
 
-static Voice_t _voice = {.detune = FIX16_ONE,
-                         .frequency = PITCH_A4,
-                         .gain = float2fix16(0.3f),
-                         .waveform = SINE};
+static voice_t voice = {.detune = FIX16_ONE,
+                        .frequency = PITCH_A4,
+                        .gain = FIX16_POINT_3,
+                        .waveform = SINE};
 
-static Envelope_t _envelope = {.attack = 0,
-                               .decay = 0,
-                               .sustain = FIX16_ONE,
-                               .release = 0,
-                               .state = OFF,
-                               .triggerAttack = false,
-                               .envelope = FIX16_ONE};
+static envelope_t envelope = {.attack = 0,
+                              .decay = 0,
+                              .sustain = FIX16_ONE,
+                              .release = 0,
+                              .state = OFF,
+                              .trigger_attack = false,
+                              .envelope = FIX16_ONE};
 
-fix16 synth_metronome_process(Tempo_t* tempo) {
-    fix16 sample = synth_waveform_sample(&_voice);
+fix16 synth_metronome_process(tempo_t* tempo) {
+  fix16 sample = synth_waveform_sample(&voice);
 
-    _envelope.triggerAttack = tempo->isBeat;
+  envelope.trigger_attack = tempo->isBeat;
 
-    sample = multfix16(_voice.gain,
-                       multfix16(sample, synth_envelope_process(&_envelope)));
+  sample = multfix16(voice.gain,
+                     multfix16(sample, synth_envelope_process(&envelope)));
 
-    return sample;
+  return sample;
 }
 
 void synth_metronome_init() {
-    synth_audiocontext_set_wavetable_stride(&_voice);
-    _envelope.release = synth_audiocontext_to_duration(0.1f);
+  synth_audiocontext_set_wavetable_stride(&voice);
+  envelope.release = synth_audiocontext_to_duration(0.1f);
 }
 
 #endif

@@ -10,6 +10,7 @@
 #include "include/circularbuffer.h"
 #include "include/controller.h"
 #include "include/envelope.h"
+#include "include/filter.h"
 #include "include/fixedpoint.h"
 #include "include/ledblink.h"
 #include "include/metronome.h"
@@ -27,15 +28,14 @@
 
 // uncomment to use midi or comment out for the test code
 #define USE_MIDI
-//#define USE_METRONOME
+// #define USE_METRONOME
 
 static uint16_t buffer0[BUFFER_LENGTH] = {0};
 static uint16_t buffer1[BUFFER_LENGTH] = {0};
 static bool swap = false;
 static int pwm_dma_channel;
-static AudioContext_t* context;
+static audio_context_t* context;
 static int bit_depth = 12;
-
 
 static uint8_t midi_dev_addr = 0;
 
@@ -103,7 +103,7 @@ static void fill_write_buffer() {
     fix16 amplitude = 0;
 
     for (int v = 0; v < VOICES_LENGTH; v++) {
-      Voice_t* voice = &context->voices[v];
+      voice_t* voice = &context->voices[v];
 
       fix16 sample = synth_waveform_sample(voice);
 
@@ -121,7 +121,7 @@ static void fill_write_buffer() {
     // apply feedback
     amplitude = amplitude +
                 multfix16(multfix16(synth_circularbuffer_read(), FIX16_POINT_7),
-                          context->delayGain);
+                          context->delay_gain);
     synth_circularbuffer_write(amplitude, context->delay);
     // *********************
 
@@ -143,7 +143,8 @@ static void fill_write_buffer() {
 
     // compression, if the amplitude is with -1..1 then compress should not
     // effect too much
-    // TODO: remove float
+    // TODO: remove float - need tanh for filter as well
+    // https://github.com/ARM-software/optimized-routines/blob/master/pl/math/tanhf_2u6.c
     amplitude = float2fix16(tanhf(fix2float16(amplitude)));
 
     // scale to an "about 12" bit signal in a 16-bit container
@@ -157,14 +158,19 @@ static void fill_write_buffer() {
 
     // final volume
     context->envelope.envelope = envelope;
-    context->audioOut[i] = out;
-    context->samplesElapsed++;
+    context->audio_out[i] = out;
+    context->samples_elapsed++;
   }
+
+  // ***** FILTER ******
+  // TODO: operates on the buffer
+  // synth_filter(context->audioOut, cutoff, resonance);
+  // *********************
 }
 
 static void __isr __time_critical_func(dma_irq_handler)() {
   // cycle buffers
-  context->audioOut = swap ? buffer0 : buffer1;
+  context->audio_out = swap ? buffer0 : buffer1;
   swap = !swap;
 
   // ack irq
@@ -176,12 +182,12 @@ static void __isr __time_critical_func(dma_irq_handler)() {
   fill_write_buffer();
 }
 
-static uint synth_pwm_init(uint16_t sampleRate) {
+static uint synth_pwm_init() {
   // derive clk_div and wrap
   // keep clk_div at 1
   uint systemClockHz = frequency_count_khz(CLOCKS_FC0_SRC_VALUE_CLK_SYS) * 1000;
 
-  uint16_t wrap = systemClockHz / sampleRate;
+  uint16_t wrap = systemClockHz / SAMPLE_RATE;
   bit_depth = 16 - floorf(log2f(wrap + 1));
 
   // setup pwm
@@ -226,46 +232,49 @@ static void synth_dma_init(uint slice) {
   irq_set_enabled(DMA_IRQ_0, true);
 }
 
-static void synth_audio_context_init(uint16_t sampleRate) {
-  context = malloc(sizeof(AudioContext_t));
+static void synth_audio_context_init() {
+  context = malloc(sizeof(audio_context_t));
 
-  context->samplesElapsed = 0;
-  context->gain = float2fix16(1);
+  context->sample_rate = SAMPLE_RATE;
+  context->samples_elapsed = 0;
+  context->gain = FIX16_ONE;
   context->delay = 0;
-  context->delayGain = 0;  // float2fix16(0.1f);
+  context->delay_gain = 0;
 
   context->envelope.state = OFF;
   context->envelope.elapsed = 0;
   context->envelope.duration = 0;
-  context->envelope.triggerAttack = false;
-  context->envelope.attack = synth_audiocontext_to_duration(0.05);
-  context->envelope.decay = synth_audiocontext_to_duration(0.05f);
-  context->envelope.sustain = float2fix16(0.5f);
-  context->envelope.release = synth_audiocontext_to_duration(0.2f);
+  context->envelope.trigger_attack = false;
+  context->envelope.attack = synth_audiocontext_to_duration(0.01f);
+  context->envelope.decay = synth_audiocontext_to_duration(0.03f);
+  context->envelope.sustain = FIX16_POINT_7;
+  context->envelope.release = synth_audiocontext_to_duration(0.3f);
 
   for (int v = 0; v < VOICES_LENGTH; v++) {
-    context->voices[v].gain = float2fix16(0.5f);
+    context->voices[v].gain = FIX16_POINT_5;
     context->voices[v].frequency = PITCH_C3;
-    context->voices[v].waveform = SQUARE;
+    context->voices[v].waveform = SAW;
     context->voices[v].detune = 0;
+    context->voices[v].width = FIX16_PI;
+    context->voices[v].wavetable_phase = 0;
     synth_audiocontext_set_wavetable_stride(&context->voices[v]);
   }
 }
 
 void init_all() {
-  synth_audio_context_init(SAMPLE_RATE);
+  synth_audio_context_init();
   synth_tempo_init(&context->tempo, 120);
   synth_metronome_init();
-  synth_midi_init(SAMPLE_RATE);
+  synth_midi_init(&context);
   synth_circularbuffer_init();
-  uint slice = synth_pwm_init(SAMPLE_RATE);
+  uint slice = synth_pwm_init();
   synth_dma_init(slice);
-  synth_controller_init(SAMPLE_RATE);
+  synth_controller_init(&context);
 
 #ifdef USE_MIDI
   board_init();
 
-  // init usb device 
+  // init usb device
   tud_init(BOARD_TUD_RHPORT);
 
   // read to initialise to the state of the physical controls

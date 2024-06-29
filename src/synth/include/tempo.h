@@ -5,10 +5,10 @@
 
 #include "audiocontext.h"
 
-void synth_tempo_set_bpm(Tempo_t* tempo, uint8_t bpm);
+void synth_tempo_set_bpm(tempo_t* tempo, uint8_t bpm);
 
-void synth_tempo_process(Tempo_t* tempo);
+void synth_tempo_process(tempo_t* tempo);
 
-void synth_tempo_init(Tempo_t* tempo, uint8_t bpm);
+void synth_tempo_init(tempo_t* tempo, uint8_t bpm);
 
 #endif

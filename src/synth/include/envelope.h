@@ -4,10 +4,10 @@
 #include "audiocontext.h"
 #include "fixedpoint.h"
 
-fix16 synth_envelope_process(Envelope_t* envelope);
+fix16 synth_envelope_process(envelope_t* envelope);
 
-void synth_envelope_note_on(Envelope_t* envelope);
+void synth_envelope_note_on(envelope_t* envelope);
 
-void synth_envelope_note_off(Envelope_t* envelope);
+void synth_envelope_note_off(envelope_t* envelope);
 
 #endif

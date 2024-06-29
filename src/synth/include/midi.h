@@ -26,8 +26,8 @@
 // - MIDI CC 73	Sound Controller 4	Allocated to the amp envelope attack time. Changes how fast the volume rises from the keypress to max volume.
 #define SYNTH_MIDI_CC_ATTACK 73
 
-void synth_midi_task(AudioContext_t* context);
-void synth_midi_init(uint16_t sampleRate);
+void synth_midi_task(audio_context_t* context);
+void synth_midi_init();
 
 static fix16 synth_midi_frequency_from_midi_note[128] = {
     0,         0,         0, 

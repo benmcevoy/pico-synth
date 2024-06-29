@@ -25,12 +25,12 @@ static inline fix16 lerp(fix16 fraction, fix16 start, fix16 end) {
                                : start + multfix16(fraction, (end - start));
 }
 
-typedef enum { SINE = 0, SQUARE, SAW, TRIANGLE, NOISE } Waveform_t;
-typedef enum { OFF = 0, ATTACK, DECAY, SUSTAIN, RELEASE } EnvelopeState_t;
+typedef enum { SINE = 0, SQUARE, SAW, TRIANGLE, NOISE } waveform_t;
+typedef enum { OFF = 0, ATTACK, DECAY, SUSTAIN, RELEASE } envelope_state_t;
 
 typedef struct {
-  bool triggerAttack;
-  EnvelopeState_t state;
+  bool trigger_attack;
+  envelope_state_t state;
   fix16 elapsed;
   fix16 duration;
   fix16 envelope;
@@ -39,38 +39,43 @@ typedef struct {
   fix16 decay;
   fix16 sustain;
   fix16 release;
-} Envelope_t;
+} envelope_t;
 
 typedef struct {
+  /// @brief fractional value between 0..1
   fix16 detune;
+  /// @brief fractional value between 0..1
+  fix16 width;
   fix16 frequency;
-  Waveform_t waveform;
-  fix16 wavetableStride;
-  fix16 waveTableReadPointer;
-  fix16 waveTablePhase;
+  waveform_t waveform;
+  fix16 wavetable_stride;
+  fix16 wavetable_read_pointer;
+  fix16 wavetable_phase;
   fix16 gain;
-} Voice_t;
+} voice_t;
 
 typedef struct {
-  uint32_t durationInSamples;
+  uint32_t duration_in_samples;
   bool isBeat;
-} Tempo_t;
+} tempo_t;
 
 typedef struct {
-  uint16_t* audioOut;
-  size_t samplesElapsed;
+  uint16_t sample_rate;
+  uint16_t* audio_out;
+  size_t samples_elapsed;
   fix16 gain;
-  Tempo_t tempo;
+  tempo_t tempo;
   uint16_t delay;
-  fix16 delayGain;
+  fix16 delay_gain;
 
-  Voice_t voices[VOICES_LENGTH];
+  voice_t voices[VOICES_LENGTH];
 
-  Envelope_t envelope;
-} AudioContext_t;
+  envelope_t envelope;
+} audio_context_t;
 
-static inline void synth_audiocontext_set_wavetable_stride(Voice_t* voice) {
-  voice->wavetableStride =
+// TODO: should be set_waveform(enum) really
+static inline void synth_audiocontext_set_wavetable_stride(voice_t* voice) {
+  voice->wavetable_stride =
       divfix16(multfix16(voice->frequency, voice->detune), FIX16_SAMPLE_RATE);
 }
 

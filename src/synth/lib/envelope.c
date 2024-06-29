@@ -2,7 +2,7 @@
 
 #include <stdio.h>
 
-static fix16 _envelopeStart = 0;
+static fix16 envelope_start = 0;
 
 static fix16 linear_easing(fix16 elapsed, fix16 duration, fix16 start,
                            fix16 end) {
@@ -10,30 +10,30 @@ static fix16 linear_easing(fix16 elapsed, fix16 duration, fix16 start,
     return lerp(fraction, start, end);
 }
 
-void synth_envelope_note_on(Envelope_t* envelope) {
-    envelope->triggerAttack = true;
+void synth_envelope_note_on(envelope_t* envelope) {
+    envelope->trigger_attack = true;
 }
 
-void synth_envelope_note_off(Envelope_t* envelope) {
-    envelope->triggerAttack = false;
+void synth_envelope_note_off(envelope_t* envelope) {
+    envelope->trigger_attack = false;
 }
 
-fix16 synth_envelope_process(Envelope_t* envelope) {
-    if (envelope->triggerAttack &&
+fix16 synth_envelope_process(envelope_t* envelope) {
+    if (envelope->trigger_attack &&
         (envelope->state == OFF || envelope->state == RELEASE)) {
         envelope->duration = envelope->attack;
         envelope->elapsed = 0;
         envelope->state = ATTACK;
-        _envelopeStart = envelope->envelope;
+        envelope_start = envelope->envelope;
     }
 
-    if (!envelope->triggerAttack &&
+    if (!envelope->trigger_attack &&
         (envelope->state == ATTACK || envelope->state == DECAY ||
          envelope->state == SUSTAIN)) {
         envelope->duration = envelope->release;
         envelope->elapsed = 0;
         envelope->state = RELEASE;
-        _envelopeStart = envelope->envelope;
+        envelope_start = envelope->envelope;
     }
 
     switch (envelope->state) {
@@ -51,7 +51,7 @@ fix16 synth_envelope_process(Envelope_t* envelope) {
             envelope->elapsed += FIX16_ONE;
 
             return linear_easing(envelope->elapsed, envelope->duration,
-                                 _envelopeStart, FIX16_ONE);
+                                 envelope_start, FIX16_ONE);
 
         case DECAY:
             if (envelope->elapsed >= envelope->duration) {
@@ -76,7 +76,7 @@ fix16 synth_envelope_process(Envelope_t* envelope) {
             envelope->elapsed += FIX16_ONE;
 
             return linear_easing(envelope->elapsed, envelope->duration,
-                                 _envelopeStart, 0);
+                                 envelope_start, 0);
 
         default:
             return 0;

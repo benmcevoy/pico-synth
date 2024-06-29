@@ -12,7 +12,7 @@ typedef struct Mcp3008 {
     uint8_t clock_pin;
     uint8_t tx_pin;
     uint8_t rx_pin;
-    uint actualBaudRate;
+    uint actual_baud_rate;
 
 } mcp3008_t;
 

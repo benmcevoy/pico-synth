@@ -15,11 +15,11 @@
  *
  * \param context The audio context
  */
-fix16 synth_waveform_sample(Voice_t* context);
+fix16 synth_waveform_sample(voice_t* voice);
 
 fix16 synth_waveform_noise();
 
-static fix16 SineWaveTable[WAVE_TABLE_LENGTH] = {
+static fix16 sine_wave_table[WAVE_TABLE_LENGTH] = {
     0,      804,    1608,   2412,   3215,   4018,   4821,   5622,   6423,
     7223,   8022,   8819,   9616,   10410,  11204,  11995,  12785,  13573,
     14359,  15142,  15923,  16702,  17479,  18253,  19024,  19792,  20557,
@@ -78,7 +78,7 @@ static fix16 SineWaveTable[WAVE_TABLE_LENGTH] = {
     -13573, -12785, -11995, -11204, -10410, -9616,  -8819,  -8022,  -7223,
     -6423,  -5622,  -4821,  -4018,  -3215,  -2412,  -1608,  -804};
 
-static fix16 TriangleWaveTable[WAVE_TABLE_LENGTH] = {
+static fix16 triangle_wave_table[WAVE_TABLE_LENGTH] = {
     -65536, -65024, -64512, -64000, -63488, -62976, -62464, -61952, -61440,
     -60928, -60416, -59904, -59392, -58880, -58368, -57856, -57344, -56832,
     -56320, -55808, -55296, -54784, -54272, -53760, -53248, -52736, -52224,
@@ -137,7 +137,7 @@ static fix16 TriangleWaveTable[WAVE_TABLE_LENGTH] = {
     -56832, -57344, -57856, -58368, -58880, -59392, -59904, -60416, -60928,
     -61440, -61952, -62464, -62976, -63488, -64000, -64512, -65024};
 
-static fix16 SawWaveTable[WAVE_TABLE_LENGTH] = {
+static fix16 saw_wave_table[WAVE_TABLE_LENGTH] = {
     0,      1306,   2612,   3915,   5214,   6509,   7798,   9080,   10353,
     11617,  12871,  14113,  15342,  16557,  17757,  18942,  20110,  21259,
     22390,  23501,  24592,  25661,  26708,  27731,  28731,  29706,  30655,

@@ -4,25 +4,33 @@
 
 #include "../include/mcp3008.h"
 
-#define spi_clock 2
-#define spi_tx 3
-#define spi_rx 4
-#define spi_cs 5
+#define SPI_CLOCK 2
+#define SPI_TX 3
+#define SPI_RX 4
+#define SPI_CS 5
 
 #define CONTROLS_COUNT 3
+#define MAX_VALUE 1024
+#define THRESHOLD 10
 
-static uint16_t _sampleRate = 0;
-const uint8_t _threshold = 10;
-static mcp3008_t _controller;
+#define NEAR_ZERO (THRESHOLD * 2)
+#define NEAR_ONE (MAX_VALUE - 2 * THRESHOLD)
+
+static mcp3008_t controller;
 control_t* controls;
 
-static inline float normal(uint16_t value) { return value / 1024.f; }
+static inline uint16_t snap(uint16_t value) {
+  if (value < NEAR_ZERO) return 0;
+  if (value > NEAR_ONE) return MAX_VALUE;
+  return value;
+}
+
+static inline float normal(uint16_t value) { return value / (float)MAX_VALUE; }
 static inline float tofix16(uint16_t value) { return value << 6; }
 
-void synth_controller_init(uint16_t sampleRate) {
-  _sampleRate = sampleRate;
-  _controller =
-      synth_mcp3008_init(spi0, 120000, spi_cs, spi_clock, spi_tx, spi_rx);
+void synth_controller_init() {
+  controller =
+      synth_mcp3008_init(spi0, 120000, SPI_CS, SPI_CLOCK, SPI_TX, SPI_RX);
 
   controls = malloc(sizeof(control_t) * CONTROLS_COUNT);
 
@@ -43,20 +51,21 @@ void synth_controller_init(uint16_t sampleRate) {
   };
 }
 
-void synth_controller_task(AudioContext_t* context) {
+void synth_controller_task(audio_context_t* context) {
   // read channels
   for (size_t i = 0; i < CONTROLS_COUNT; i++) {
-    uint16_t value = synth_mcp3008_read(&_controller, controls[i].channel);
+    uint16_t value =
+        snap(synth_mcp3008_read(&controller, controls[i].channel));
 
-    if (abs(controls[i].value - value) > _threshold) {
+    if (abs(controls[i].value - value) > THRESHOLD) {
       controls[i].value = value;
 
       // apply immediately as efficient to do that here
       // and makes the sound responsive
       switch (controls[i].action) {
         case ACTION_DETUNE: {
-          // map raw value to small range 0 to 0.1
-          fix16 d = float2fix16(value / 10240.f);
+          // map raw value to small range 0 to 0.05
+          fix16 d = float2fix16(value / 20480.f);
           // +/- detune each voice.
           context->voices[0].detune = FIX16_ONE - d;
           context->voices[1].detune = FIX16_ONE + d;
@@ -65,37 +74,44 @@ void synth_controller_task(AudioContext_t* context) {
           synth_audiocontext_set_wavetable_stride(&(context->voices[1]));
         } break;
 
-        case ACTION_WIDTH:
-          // TODO: pulse width
-          break;
+          // case ACTION_WIDTH: {
+          //   // TODO: this does not work but I do not understand why
+          //   // ok - i think it because the audio itself is pwm, and i am
+          //   trying to add pwm to it and
+          //   // it gets aliased to hell
+          //   // need a scope
+          //   fix16 width = float2fix16(normal(value));
+          //   context->voices[0].width = width;
+          //   context->voices[1].width = width;
+          // } break;
 
         case ACTION_DELAY:
           // delay is proportional to sample rate
-          context->delay = _sampleRate * normal(controls[i].value);
+          context->delay = context->sample_rate * normal(value);
           break;
 
         case ACTION_DELAYGAIN:
           // shift 6 to make 10 bit number a 16 bit number
-          context->delayGain = tofix16(controls[i].value);
+          context->delay_gain = tofix16(value);
           break;
 
         case ACTION_ATTACK:
           context->envelope.attack =
-              synth_audiocontext_to_duration(normal(controls[i].value));
+              synth_audiocontext_to_duration(normal(value));
           break;
 
         case ACTION_DECAY:
           context->envelope.decay =
-              synth_audiocontext_to_duration(normal(controls[i].value));
+              synth_audiocontext_to_duration(normal(value));
           break;
 
         case ACTION_RELEASE:
           context->envelope.release =
-              synth_audiocontext_to_duration(normal(controls[i].value));
+              synth_audiocontext_to_duration(normal(value));
           break;
 
         case ACTION_SUSTAIN:
-          context->envelope.sustain = float2fix16(normal(controls[i].value));
+          context->envelope.sustain = float2fix16(normal(value));
           break;
 
         default:

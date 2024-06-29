@@ -1,10 +1,10 @@
 #include "../include/mcp3008.h"
 
-mcp3008_t synth_mcp3008_init(spi_inst_t* spi, size_t baudRate, uint8_t chip_select_pin,
+mcp3008_t synth_mcp3008_init(spi_inst_t* spi, size_t baud_rate, uint8_t chip_select_pin,
                        uint8_t clock_pin, uint8_t tx_pin, uint8_t rx_pin) {
   gpio_init(chip_select_pin);
   gpio_set_dir(chip_select_pin, GPIO_OUT);
-  uint actualBaudRate = spi_init(spi, baudRate);
+  uint actual_baud_rate = spi_init(spi, baud_rate);
 
   spi_set_format(
       spi,  // SPI
@@ -21,7 +21,7 @@ mcp3008_t synth_mcp3008_init(spi_inst_t* spi, size_t baudRate, uint8_t chip_sele
   gpio_set_function(rx_pin, GPIO_FUNC_SPI);
 
   return (mcp3008_t){.spi = spi,
-                     .actualBaudRate = actualBaudRate,
+                     .actual_baud_rate = actual_baud_rate,
                      .tx_pin = tx_pin,
                      .clock_pin = clock_pin,
                      .rx_pin = rx_pin,

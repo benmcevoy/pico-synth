@@ -701,7 +701,7 @@ wow.  i use float instead of double and now can run at ~82kHz
 
 ### Envelope
 
-DONE - remove amplitude from Voice_t and let envelope control it
+DONE - remove amplitude from voice_t and let envelope control it
 
 DONE - NoteOn - trigger attack-decay-sustain (onset)
 
@@ -713,7 +713,7 @@ i had something like:
 
 ```c
 
-// function pointer as a member of Voice_t
+// function pointer as a member of voice_t
 float (*envelopeGenerator)(float, float, float);
 
 // function i was trying to use
@@ -739,7 +739,7 @@ SID has a control register a single bit to indicate voiceOn or voiceOff
 
 Bit #0: 0 = Voice off, Release cycle; 1 = Voice on, Attack-Decay-Sustain cycle.
 
-so I added a flag to the voice `bool triggerAttack`
+so I added a flag to the voice `bool trigger_attack`
 
 and made a state machine as suggested by Bela.  
 

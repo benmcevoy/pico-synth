@@ -1,16 +1,16 @@
 #include "../include/tempo.h"
 
-static uint32_t _interval = 0;
+static uint32_t interval = 0;
 
-void synth_tempo_set_bpm(Tempo_t* tempo, uint8_t bpm) {
-    tempo->durationInSamples = 60 / (float)bpm * SAMPLE_RATE;
-    _interval = tempo->durationInSamples;
+void synth_tempo_set_bpm(tempo_t* tempo, uint8_t bpm) {
+    tempo->duration_in_samples = 60 / (float)bpm * SAMPLE_RATE;
+    interval = tempo->duration_in_samples;
 }
 
-void synth_tempo_process(Tempo_t* tempo) {
-    if (--_interval == 0) {
+void synth_tempo_process(tempo_t* tempo) {
+    if (--interval == 0) {
         tempo->isBeat = true;
-        _interval = tempo->durationInSamples;
+        interval = tempo->duration_in_samples;
         return;
     }
 
@@ -18,6 +18,6 @@ void synth_tempo_process(Tempo_t* tempo) {
     return;
 }
 
-void synth_tempo_init(Tempo_t* tempo, uint8_t bpm) {
+void synth_tempo_init(tempo_t* tempo, uint8_t bpm) {
     synth_tempo_set_bpm(tempo, bpm);
 }
