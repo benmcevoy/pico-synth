@@ -2,7 +2,7 @@
 
 Audio synthesizer running on a Raspberyy Pi Pico device.
 
-Currently monophonic with three voices.
+Currently monophonic with TWO voices.
 
 You WILL need to make a little circuit to drop the PWM voltage from 3.3 volts to about 1.1 volts and filter low/high noise out.  Or just risk it and plug in a speaker :)
 
@@ -14,3 +14,8 @@ You can find a `synth.uf2` file in the build folder which can be copied onto the
 
 This is about the third C project I have written in the last thirty years, so you know... all bugs are my own.
 
+## TinyUSB
+
+pico-sdk ships an older version of tinyusb, so i have pulled latest of that module in order to get the newer usb host code.
+
+Must be > v0.16

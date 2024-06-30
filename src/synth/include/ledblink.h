@@ -3,7 +3,7 @@
 
 #include <stdlib.h>
 
-#include "bsp/board.h"
+#include "bsp/board_api.h"
 
 enum {
     BLINK_NOT_MOUNTED = 250,
