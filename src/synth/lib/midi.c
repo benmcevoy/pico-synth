@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "../usb_midi_host.h"
 #include "include/envelope.h"
 #include "include/fixedpoint.h"
 #include "tusb.h"
@@ -98,17 +99,14 @@ void control_change(audio_context_t* context, uint8_t command,
 }
 
 static void process_midi_command(audio_context_t* context, uint8_t packet[4]) {
-  uint8_t command = packet[1] & 0b11110000;
-
-  printf("midi: %d %d %d %d %d\n", command, packet[0], packet[1], packet[2],
-         packet[3]);
+  uint8_t command = packet[0] & 0b11110000;
 
   switch (command) {
     case SYNTH_MIDI_NOTEON:
-      note_on(context, packet[2], packet[3]);
+      note_on(context, packet[1], packet[2]);
       break;
     case SYNTH_MIDI_NOTEOFF:
-      note_off(context, packet[2]);
+      note_off(context, packet[1]);
       break;
     case SYNTH_MIDI_CC:
       // control_change(context, packet[2], packet[3]);
@@ -116,13 +114,8 @@ static void process_midi_command(audio_context_t* context, uint8_t packet[4]) {
   }
 }
 
-void synth_midi_task(audio_context_t* context) {
-  uint8_t packet[4];
-  while (tud_midi_available()) {
-    // reads into the packet array
-    tud_midi_packet_read(packet);
+void synth_midi_task(audio_context_t* context, uint8_t* packet) {
     process_midi_command(context, packet);
-  }
 }
 
-void synth_midi_init() {  }
+void synth_midi_init() {}

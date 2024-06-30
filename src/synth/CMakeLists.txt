@@ -4,7 +4,8 @@ set(BOARD pico_sdk)
 set(TINYUSB_FAMILY_PROJECT_NAME_PREFIX "tinyusb_dev_")
 
 add_executable(${projectName} main.c 
-    usb_descriptors.c
+    usb_midi_host_app_driver.c
+    usb_midi_host.c
     lib/circularbuffer.c
     lib/controller.c
     lib/envelope.c
@@ -35,7 +36,7 @@ target_link_libraries(${projectName} PUBLIC
     hardware_dma 
     hardware_spi
     tinyusb_board
-    tinyusb_device
+    tinyusb_host
     pico_multicore
     pico_unique_id
     )

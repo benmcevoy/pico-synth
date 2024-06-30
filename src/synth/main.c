@@ -23,6 +23,7 @@
 #include "test.h"
 #include "tusb.h"
 #include "tusb_config.h"
+#include "usb_midi_host.h"
 
 #define PWM_PIN 26
 
@@ -274,8 +275,8 @@ void init_all() {
 #ifdef USE_MIDI
   board_init();
 
-  // init usb device
-  tud_init(BOARD_TUD_RHPORT);
+  // init usb host
+  tuh_init(BOARD_TUD_RHPORT);
 
   // read to initialise to the state of the physical controls
   synth_controller_task(context);
@@ -289,11 +290,10 @@ void core1_worker() {
     // synth_controller_task(context);
     synth_test_play(context);
 #else
-    // tinyusb device task
-    tud_task();
+    // tinyusb host task
+    tuh_task();
     synth_led_blink_task();
     synth_controller_task(context);
-    synth_midi_task(context);
 #endif
   }
 }
@@ -315,4 +315,73 @@ int main() {
   while (1) {
     tight_loop_contents();
   }
+}
+
+
+//--------------------------------------------------------------------+
+// TinyUSB Callbacks
+//--------------------------------------------------------------------+
+
+// Invoked when device with hid interface is mounted
+// Report descriptor is also available for use. tuh_hid_parse_report_descriptor()
+// can be used to parse common/simple enough descriptor.
+// Note: if report descriptor length > CFG_TUH_ENUMERATION_BUFSIZE, it will be skipped
+// therefore report_desc = NULL, desc_len = 0
+void tuh_midi_mount_cb(uint8_t dev_addr, uint8_t in_ep, uint8_t out_ep, uint8_t num_cables_rx, uint16_t num_cables_tx)
+{
+  printf("MIDI device address = %u, IN endpoint %u has %u cables, OUT endpoint %u has %u cables\r\n",
+      dev_addr, in_ep & 0xf, num_cables_rx, out_ep & 0xf, num_cables_tx);
+
+  if (midi_dev_addr == 0) {
+    // then no MIDI device is currently connected
+    midi_dev_addr = dev_addr;
+  }
+  else {
+    printf("A different USB MIDI Device is already connected.\r\nOnly one device at a time is supported in this program\r\nDevice is disabled\r\n");
+  }
+}
+
+// Invoked when device with hid interface is un-mounted
+void tuh_midi_umount_cb(uint8_t dev_addr, uint8_t instance)
+{
+  if (dev_addr == midi_dev_addr) {
+    midi_dev_addr = 0;
+    printf("MIDI device address = %d, instance = %d is unmounted\r\n", dev_addr, instance);
+  }
+  else {
+    printf("Unused MIDI device address = %d, instance = %d is unmounted\r\n", dev_addr, instance);
+  }
+}
+
+void tuh_midi_rx_cb(uint8_t dev_addr, uint32_t num_packets)
+{
+  if (midi_dev_addr == dev_addr) {
+    if (num_packets != 0) {
+      uint8_t cable_num;
+      uint8_t buffer[48];
+      while (1) {
+        uint32_t bytes_read = tuh_midi_stream_read(dev_addr, &cable_num, buffer, sizeof(buffer));
+        if (bytes_read == 0)
+          return;
+        // printf("MIDI RX Cable #%u:", cable_num);
+        // for (uint32_t idx = 0; idx < bytes_read; idx++) {
+        //   printf("%02x ", buffer[idx]);
+        // }
+        // printf("\r\n");
+
+  // uint8_t command = buffer[0] & 0b11110000;
+
+  // printf("midi: %d %d %d %d %d\n", command, buffer[0], buffer[1], buffer[2],
+  //        buffer[3]);
+
+         synth_midi_task(context, buffer);
+
+      }
+    }
+  }
+}
+
+void tuh_midi_tx_cb(uint8_t dev_addr)
+{
+    (void)dev_addr;
 }
