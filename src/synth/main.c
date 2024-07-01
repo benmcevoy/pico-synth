@@ -116,21 +116,6 @@ static void fill_write_buffer() {
     amplitude = multfix16(amplitude, envelope);
     // *********************
 
-    // **** DELAY/ECHO *****
-    if (context->delay_enabled) {
-      // apply feedback
-      amplitude = amplitude + multfix16(multfix16(synth_circularbuffer_read(),
-                                                  FIX16_POINT_7),
-                                        context->delay_gain);
-      synth_circularbuffer_write(amplitude, context->delay);
-    }
-    // *********************
-
-    if (context->metronome_enabled) {
-      synth_tempo_process(&context->tempo);
-      amplitude += synth_metronome_process(&context->tempo);
-    }
-
     // apply master gain
     // i have preserved the mix as just summation
     // gain can scale it down to avoid clipping
@@ -143,12 +128,6 @@ static void fill_write_buffer() {
     // and hopefully the effect will be more obvious
     // currently I cannot tell the difference
     // amplitude += dither(amplitude);
-    // *********************
-
-    // ***** COMPRESS ******
-    // compression, if the amplitude is with -1..1 then compress should not
-    // effect too much
-    amplitude = tanhfix16(amplitude);
     // *********************
 
     // final volume
@@ -167,6 +146,30 @@ static void fill_write_buffer() {
   // need to scale to 0..2^16
   for (size_t i = 0; i < BUFFER_LENGTH; i++) {
     fix16 amplitude = context->raw[i];
+
+
+    // **** DELAY/ECHO *****
+    if (context->delay_enabled) {
+      // apply feedback
+      amplitude = amplitude + multfix16(multfix16(synth_circularbuffer_read(),
+                                                  FIX16_POINT_7),
+                                        context->delay_gain);
+      synth_circularbuffer_write(amplitude, context->delay);
+    }
+    
+    // **** METRONOME *****
+    // metronome added after effects
+    if (context->metronome_enabled) {
+      synth_tempo_process(&context->tempo);
+      amplitude += synth_metronome_process(&context->tempo);
+    }
+    // *********************
+
+    // ***** COMPRESS ******
+    // compression, if the amplitude is with -1..1 then compress should not
+    // effect too much
+    amplitude = tanhfix16(amplitude);
+    // *********************
 
     // the mix value is between -1..1
     // add 1 to move it 0..2
@@ -254,10 +257,10 @@ static void synth_audio_context_init() {
   context->audio_out = buffer1;
   context->sample_rate = SAMPLE_RATE;
   context->samples_elapsed = 0;
-  context->gain = FIX16_ONE;
+  context->gain = FIX16_POINT_7;
   context->delay = 0;
   context->delay_gain = 0;
-  context->delay_enabled = false;
+  context->delay_enabled = true;
   context->metronome_enabled = false;
   context->filter_enabled = true;
 
@@ -281,25 +284,28 @@ static void synth_audio_context_init() {
 }
 
 void init_all() {
+  board_init();
   synth_audio_context_init();
   synth_tempo_init(&context->tempo, 120);
   synth_metronome_init();
   synth_filter_init(context);
-  synth_midi_init();
   synth_circularbuffer_init();
   uint slice = synth_pwm_init();
   synth_dma_init(slice);
   synth_controller_init();
 
 #ifdef USE_MIDI
-  board_init();
+  synth_midi_init();
 
   // init usb host
   tuh_init(BOARD_TUD_RHPORT);
 
   // read to initialise to the state of the physical controls
+  sleep_ms(100);
   synth_controller_task(context);
+  sleep_ms(100);
   synth_midi_panic(context);
+  sleep_ms(100);
 #endif
 }
 

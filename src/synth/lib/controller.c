@@ -9,7 +9,7 @@
 #define SPI_RX 4
 #define SPI_CS 5
 
-#define CONTROLS_COUNT 3
+#define CONTROLS_COUNT 4
 #define MAX_VALUE 1024
 #define THRESHOLD 10
 
@@ -37,15 +37,20 @@ void synth_controller_init() {
   controls[0] = (control_t){
       .channel = 0,
       .value = 0,
-      .action = ACTION_DETUNE,
+      .action = ACTION_DELAY,
   };
   controls[1] = (control_t){
       .channel = 1,
       .value = 0,
-      .action = ACTION_CUTOFF,
-  };
+      .action = ACTION_DELAYGAIN,
+  };  
   controls[2] = (control_t){
       .channel = 2,
+      .value = 0,
+      .action = ACTION_CUTOFF,
+  };
+  controls[3] = (control_t){
+      .channel = 3,
       .value = 0,
       .action = ACTION_RESONANCE,
   };
@@ -72,17 +77,6 @@ void synth_controller_task(audio_context_t* context) {
           synth_audiocontext_set_wavetable_stride(&(context->voices[0]));
           synth_audiocontext_set_wavetable_stride(&(context->voices[1]));
         } break;
-
-          // case ACTION_WIDTH: {
-          //   // TODO: this does not work but I do not understand why
-          //   // ok - i think it because the audio itself is pwm, and i am
-          //   trying to add pwm to it and
-          //   // it gets aliased to hell
-          //   // need an oscilloscope
-          //   fix16 width = float2fix16(normal(value));
-          //   context->voices[0].width = width;
-          //   context->voices[1].width = width;
-          // } break;
 
         case ACTION_DELAY:
           // delay is proportional to sample rate
