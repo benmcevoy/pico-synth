@@ -19,3 +19,5 @@ This is about the third C project I have written in the last thirty years, so yo
 pico-sdk ships an older version of tinyusb, so i have pulled latest of that module in order to get the newer usb host code.
 
 Must be > v0.16
+
+midi host code from:  https://github.com/rppicomidi/usb_midi_host
