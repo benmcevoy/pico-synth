@@ -6,6 +6,12 @@
 
 #include "fixedpoint.h"
 
+// TODO: why can't I use math.h for this?
+#ifndef M_PI
+#define M_PI 3.14159265358979323846f
+#define M_PI_2 1.57079632679489661923
+#endif
+
 // if sample rate is greater than 32767 it will not fit in a signed fix16, so
 // shift the decimal point to resolve this
 // #define SAMPLE_RATE_SCALE_FACTOR 1
@@ -13,7 +19,6 @@
 // fix16 e.g << 16
 
 // 32767 is a fine sample rate anyway.
-
 #define SAMPLE_RATE 32767
 #define FIX16_SAMPLE_RATE 2147418112
 #define BUFFER_LENGTH 64
@@ -67,6 +72,9 @@ typedef struct {
   tempo_t tempo;
   uint16_t delay;
   fix16 delay_gain;
+
+  float cutoff;
+  float resonance;
 
   voice_t voices[VOICES_LENGTH];
 

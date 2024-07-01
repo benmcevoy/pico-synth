@@ -42,20 +42,19 @@ void synth_controller_init() {
   controls[1] = (control_t){
       .channel = 1,
       .value = 0,
-      .action = ACTION_DELAY,
+      .action = ACTION_CUTOFF,
   };
   controls[2] = (control_t){
       .channel = 2,
       .value = 0,
-      .action = ACTION_DELAYGAIN,
+      .action = ACTION_RESONANCE,
   };
 }
 
 void synth_controller_task(audio_context_t* context) {
   // read channels
   for (size_t i = 0; i < CONTROLS_COUNT; i++) {
-    uint16_t value =
-        snap(synth_mcp3008_read(&controller, controls[i].channel));
+    uint16_t value = snap(synth_mcp3008_read(&controller, controls[i].channel));
 
     if (abs(controls[i].value - value) > THRESHOLD) {
       controls[i].value = value;
@@ -64,7 +63,7 @@ void synth_controller_task(audio_context_t* context) {
       // and makes the sound responsive
       switch (controls[i].action) {
         case ACTION_DETUNE: {
-          // map raw value to small range 0 to 0.05
+         // map raw value to small range 0 to 0.05
           fix16 d = float2fix16(value / 20480.f);
           // +/- detune each voice.
           context->voices[0].detune = FIX16_ONE - d;
@@ -79,7 +78,7 @@ void synth_controller_task(audio_context_t* context) {
           //   // ok - i think it because the audio itself is pwm, and i am
           //   trying to add pwm to it and
           //   // it gets aliased to hell
-          //   // need a scope
+          //   // need an oscilloscope
           //   fix16 width = float2fix16(normal(value));
           //   context->voices[0].width = width;
           //   context->voices[1].width = width;
@@ -93,6 +92,15 @@ void synth_controller_task(audio_context_t* context) {
         case ACTION_DELAYGAIN:
           // shift 6 to make 10 bit number a 16 bit number
           context->delay_gain = tofix16(value);
+          break;
+
+        case ACTION_CUTOFF:
+          // max is half sample rate, about 16khz
+          context->cutoff = (context->sample_rate >> 1) * normal(value);
+          break;
+
+        case ACTION_RESONANCE:
+          context->resonance = normal(value);
           break;
 
         case ACTION_ATTACK:

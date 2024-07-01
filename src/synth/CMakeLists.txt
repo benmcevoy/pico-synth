@@ -9,6 +9,7 @@ add_executable(${projectName} main.c
     lib/circularbuffer.c
     lib/controller.c
     lib/envelope.c
+    lib/filter.c
     lib/mcp3008.c
     lib/midi.c
     lib/tempo.c

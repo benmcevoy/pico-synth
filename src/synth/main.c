@@ -40,7 +40,7 @@ static int bit_depth = 12;
 
 static uint8_t midi_dev_addr = 0;
 
-fix16 _previousDither = 0;
+static fix16 previous_dither = 0;
 static fix16 dither() {
   // mask off the bottom 8 bits
   uint8_t p = synth_waveform_noise() & 0x00000ff;
@@ -92,9 +92,9 @@ static fix16 dither() {
     dither = 57344 >> depth;
 
   // noise shaping
-  fix16 result = dither - _previousDither;
+  fix16 result = dither - previous_dither;
 
-  _previousDither = dither;
+  previous_dither = dither;
 
   return result;
 }
@@ -135,27 +135,35 @@ static void fill_write_buffer() {
     // gain can scale it down to avoid clipping
     amplitude = multfix16(context->gain, amplitude);
 
+    // ***** DITHER ******
     // TODO: not sure I need to introduce noise when I use a breadboard :)
     // if/when I can get control of the sample rate/bit depth again
     // i'll drop it down to 8 or 6 bits (thanks Tony)
     // and hopefully the effect will be more obvious
     // currently I cannot tell the difference
     // amplitude += dither(amplitude);
+    // *********************
 
+    // ***** COMPRESS ******
     // compression, if the amplitude is with -1..1 then compress should not
     // effect too much
-    // TODO: remove float - need tanh for filter as well
-    // https://github.com/ARM-software/optimized-routines/blob/master/pl/math/tanhf_2u6.c
-    amplitude = float2fix16(tanhf(fix2float16(amplitude)));
+    amplitude = tanhfix16(amplitude);
+    // *********************
 
-    // scale to an "about 12" bit signal in a 16-bit container
+    // ***** CONVERT TO PWM ******
+    // final conversion to PWM
+    // amplitude value is fix16 and should be roughly between -1..1
+    // need to scale to 0..2^16
+
     // the mix value is between -1..1
     // add 1 to move it 0..2
-    // we should now have a number between 0..2 (or really 0..1.99999999999
-    // need to scale to the bit depth as determined by the wrap calulated on
-    // init
     amplitude = amplitude + FIX16_ONE;
+
+    // scale to an "about 12" bit signal in a 16-bit container
+    // we should now have a number between 0..2 (or really 0..1.99999999999
+    // need to scale to the bit depth as determined by the wrap calulated on init
     uint16_t out = (uint16_t)(amplitude >> bit_depth);
+    // *********************
 
     // final volume
     context->envelope.envelope = envelope;
@@ -164,8 +172,7 @@ static void fill_write_buffer() {
   }
 
   // ***** FILTER ******
-  // TODO: operates on the buffer
-  // synth_filter(context->audioOut, cutoff, resonance);
+  //synth_filter_process(context);
   // *********************
 }
 
@@ -254,8 +261,8 @@ static void synth_audio_context_init() {
   for (int v = 0; v < VOICES_LENGTH; v++) {
     context->voices[v].gain = FIX16_POINT_5;
     context->voices[v].frequency = PITCH_C3;
-    context->voices[v].waveform = SAW;
-    context->voices[v].detune = 0;
+    context->voices[v].waveform = SQUARE;
+    context->voices[v].detune = FIX16_ONE;
     context->voices[v].width = FIX16_PI;
     context->voices[v].wavetable_phase = 0;
     synth_audiocontext_set_wavetable_stride(&context->voices[v]);
@@ -266,6 +273,7 @@ void init_all() {
   synth_audio_context_init();
   synth_tempo_init(&context->tempo, 120);
   synth_metronome_init();
+  synth_filter_init(context);
   synth_midi_init();
   synth_circularbuffer_init();
   uint slice = synth_pwm_init();
