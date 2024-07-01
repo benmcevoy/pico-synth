@@ -64,7 +64,13 @@ void synth_filter_process(audio_context_t* context) {
   set_resonance(context->resonance);
   set_cutoff(context->cutoff);
 
+  // simple envelope follower
+  //set_cutoff(multfix16(context->cutoff, context->envelope.envelope));
+
   for (size_t s = 0; s < BUFFER_LENGTH; ++s) {
+
+    
+
     fix16 x = context->raw[s] - multfix16(resonance, stage[3]);
 
     // Four cascaded one-pole filters (bilinear transform)

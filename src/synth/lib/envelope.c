@@ -7,7 +7,7 @@ static fix16 envelope_start = 0;
 static fix16 linear_easing(fix16 elapsed, fix16 duration, fix16 start,
                            fix16 end) {
     fix16 fraction = divfix16(elapsed, duration);
-    return lerp(fraction, start, end);
+    return lerpfix16(fraction, start, end);
 }
 
 void synth_envelope_note_on(envelope_t* envelope) {

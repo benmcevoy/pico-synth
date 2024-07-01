@@ -21,14 +21,11 @@
 // 32767 is a fine sample rate anyway.
 #define SAMPLE_RATE 32767
 #define FIX16_SAMPLE_RATE 2147418112
-#define BUFFER_LENGTH 256
+#define BUFFER_LENGTH 128
+// last time I checked I can handle 32 voices, which is pretty good
+// could maybe do a polyphonic
+// keep removing floats and refactor the fixed point integert to q2.14
 #define VOICES_LENGTH 2
-
-// TODO: this is not a reasonable place to park this code
-static inline fix16 lerp(fix16 fraction, fix16 start, fix16 end) {
-  return fraction >= FIX16_ONE ? end
-                               : start + multfix16(fraction, (end - start));
-}
 
 typedef enum { SINE = 0, SQUARE, SAW, TRIANGLE, NOISE } waveform_t;
 typedef enum { OFF = 0, ATTACK, DECAY, SUSTAIN, RELEASE } envelope_state_t;
@@ -49,8 +46,6 @@ typedef struct {
 typedef struct {
   /// @brief fractional value between 0..1
   fix16 detune;
-  /// @brief fractional value between 0..1
-  fix16 width;
   fix16 frequency;
   waveform_t waveform;
   fix16 wavetable_stride;
@@ -70,10 +65,15 @@ typedef struct {
   fix16* raw;
   size_t samples_elapsed;
   fix16 gain;
+
+  bool metronome_enabled;
   tempo_t tempo;
+
+  bool delay_enabled;
   uint16_t delay;
   fix16 delay_gain;
 
+  bool filter_enabled;
   fix16 cutoff;
   fix16 resonance;
 
@@ -82,7 +82,6 @@ typedef struct {
   envelope_t envelope;
 } audio_context_t;
 
-// TODO: should be set_waveform(enum) really
 static inline void synth_audiocontext_set_wavetable_stride(voice_t* voice) {
   voice->wavetable_stride =
       divfix16(multfix16(voice->frequency, voice->detune), FIX16_SAMPLE_RATE);

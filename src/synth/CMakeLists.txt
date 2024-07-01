@@ -17,10 +17,10 @@ add_executable(${projectName} main.c
 
 #pico_set_binary_type(${projectName} no_flash)
 
-# # allow stable overclock - set SPI flash clock divider - necessary over 300MHz 
-# pico_define_boot_stage2(${projectName} ${PICO_DEFAULT_BOOT_STAGE2_FILE})
-# target_compile_definitions(${projectName} PRIVATE PICO_FLASH_SPI_CLKDIV=4)
-# #pico_set_boot_stage2(TARGET ${projectName})
+# allow stable overclock - set SPI flash clock divider - necessary over 300MHz 
+pico_define_boot_stage2(pico-clock-div4 ${PICO_DEFAULT_BOOT_STAGE2_FILE})
+target_compile_definitions(pico-clock-div4 PRIVATE PICO_FLASH_SPI_CLKDIV=4)
+pico_set_boot_stage2(${projectName} pico-clock-div4)
 
 # configure UART
 pico_enable_stdio_usb(${projectName} 0)

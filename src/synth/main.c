@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-// #include "hardware/vreg.h"
+#include "hardware/vreg.h"
 #include "hardware/clocks.h"
 #include "hardware/dma.h"
 #include "hardware/pwm.h"
@@ -29,7 +29,6 @@
 
 // uncomment to use midi or comment out for the test code
 #define USE_MIDI
-// #define USE_METRONOME
 
 static uint16_t buffer0[BUFFER_LENGTH] = {0};
 static uint16_t buffer1[BUFFER_LENGTH] = {0};
@@ -118,17 +117,19 @@ static void fill_write_buffer() {
     // *********************
 
     // **** DELAY/ECHO *****
-    // apply feedback
-    amplitude = amplitude +
-                multfix16(multfix16(synth_circularbuffer_read(), FIX16_POINT_7),
-                          context->delay_gain);
-    synth_circularbuffer_write(amplitude, context->delay);
+    if (context->delay_enabled) {
+      // apply feedback
+      amplitude = amplitude + multfix16(multfix16(synth_circularbuffer_read(),
+                                                  FIX16_POINT_7),
+                                        context->delay_gain);
+      synth_circularbuffer_write(amplitude, context->delay);
+    }
     // *********************
 
-#ifdef USE_METRONOME
-    synth_tempo_process(&context->tempo);
-    amplitude += synth_metronome_process(&context->tempo);
-#endif
+    if (context->metronome_enabled) {
+      synth_tempo_process(&context->tempo);
+      amplitude += synth_metronome_process(&context->tempo);
+    }
 
     // apply master gain
     // i have preserved the mix as just summation
@@ -157,7 +158,7 @@ static void fill_write_buffer() {
   }
 
   // ***** FILTER ******
-  synth_filter_process(context);
+  if (context->filter_enabled) synth_filter_process(context);
   // *********************
 
   // ***** CONVERT TO PWM ******
@@ -256,6 +257,9 @@ static void synth_audio_context_init() {
   context->gain = FIX16_ONE;
   context->delay = 0;
   context->delay_gain = 0;
+  context->delay_enabled = false;
+  context->metronome_enabled = false;
+  context->filter_enabled = true;
 
   context->envelope.state = OFF;
   context->envelope.elapsed = 0;
@@ -271,7 +275,6 @@ static void synth_audio_context_init() {
     context->voices[v].frequency = PITCH_C3;
     context->voices[v].waveform = SAW;
     context->voices[v].detune = FIX16_ONE;
-    context->voices[v].width = FIX16_PI;
     context->voices[v].wavetable_phase = 0;
     synth_audiocontext_set_wavetable_stride(&context->voices[v]);
   }
@@ -316,8 +319,8 @@ void core1_worker() {
 }
 
 int main() {
-  // vreg_set_voltage(VREG_VOLTAGE_1_15);
-  set_sys_clock_khz(240000, true);
+  vreg_set_voltage(VREG_VOLTAGE_1_15);
+  set_sys_clock_khz(320000, true);
   stdio_init_all();
   init_all();
 
@@ -325,12 +328,9 @@ int main() {
   printf("sample rate: %d\n", SAMPLE_RATE);
   printf("bit depth: %d\n", 16 - bit_depth);
 
-  printf("%d\n", float2fix16(4/M_PI));
-  printf("%d\n", float2fix16(-4/(M_PI*M_PI)));
-
   // multicore_launch_core1(core1_worker);
   core1_worker();
-  
+
   while (1) {
     tight_loop_contents();
   }

@@ -10,12 +10,6 @@
 #include "include/pitchtable.h"
 #include "include/waveform.h"
 
-// TODO: get rid of floats? I don't really even use this fucntion
-static fix16 frequency_from_reference_pitch(fix16 reference, uint8_t pitch) {
-    float freq = fix2float16(reference);
-    return float2fix16(freq * powf(2.f, (float)pitch / 12.f));
-}
-
 static void set_frequency(audio_context_t* context, fix16 f,
                           waveform_t waveform) {
     for (int v = 0; v < VOICES_LENGTH; v++) {
@@ -62,20 +56,6 @@ static void test_sweep(audio_context_t* context, waveform_t waveform) {
     sleep_ms(120);
 }
 
-static void test_pattern(audio_context_t* context, waveform_t waveform) {
-    uint8_t pattern[6] = {0, 1, 3, 5, 3, 1};
-
-    for (int i = 0; i < sizeof(pattern); i++) {
-        set_frequency(context,
-                      frequency_from_reference_pitch(PITCH_C3, pattern[i]),
-                      waveform);
-        synth_envelope_note_on(&context->envelope);
-        sleep_ms(120);
-        synth_envelope_note_off(&context->envelope);
-        sleep_ms(220);
-    }
-}
-
 static void test_midi_pattern(audio_context_t* context, waveform_t waveform) {
     // nicked from the tinyusb example
     uint8_t pattern[] = {74, 78, 81,  86, 90, 93, 98,  102, 57, 61, 66, 69, 73,
@@ -101,15 +81,13 @@ void synth_test_play(audio_context_t* context) {
     synth_envelope_note_off(&context->envelope);
     sleep_ms(1200);
 
-    test_pattern(context, context->voices[0].waveform);
-
+    context->delay_enabled = true;
     context->delay = SAMPLE_RATE /4.f;
     context->delay_gain = float2fix16(0.5f);
 
     test_midi_pattern(context, context->voices[0].waveform);
 
-    context->delay = 0;
-    context->delay_gain = 0;
+    context->delay_enabled = false;
 
     // test_waveform(context, NOISE);
     // test_waveform(context, TRIANGLE);
