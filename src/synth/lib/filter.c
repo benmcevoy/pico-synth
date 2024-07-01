@@ -12,63 +12,80 @@
 // GitHub with various licenses, it might be reasonable to suggest that the
 // license is CC-BY-SA
 
-float cutoff;
-float resonance;
-float sample_rate;
-static float stage[4];
-static float delay[4];
-static float p;
-static float k;
-static float t1;
-static float t2;
+static fix16 cutoff;
+static fix16 resonance;
+static fix16 sample_rate;
+static fix16 stage[4];
+static fix16 delay[4];
+static fix16 p;
+static fix16 k;
+static fix16 t1;
+static fix16 t2;
 
-void synth_filter_set_resonance(float r) {
-  resonance = r * (t2 + 6.0 * t1) / (t2 - 6.0 * t1);
+#define FIX16_2 131072
+#define FIX16_6 393216
+#define FIX16_8 524288
+#define FIX16_12 786432
+#define FIX16_1_POINT_8 117964
+#define FIX16_1_POINT_386249 90849
+#define FIX16_PI_2 102943
+
+static void set_resonance(fix16 r) {
+  resonance = multfix16(r, divfix16((t2 + multfix16(FIX16_6, t1)),
+                                    (t2 - multfix16(FIX16_6, t1))));
 }
 
-void synth_filter_set_cutoff(float c) {
-  cutoff = 2.0 * c / sample_rate;
+static void set_cutoff(fix16 c) {
+  cutoff = divfix16(multfix16(FIX16_2, c), sample_rate);
 
-  p = cutoff * (1.8 - 0.8 * cutoff);
-  k = 2.0 * sinf(cutoff * M_PI_2) - 1.0;
-  t1 = (1.0 - p) * 1.386249;
-  t2 = 12.0 + t1 * t1;
+  p = multfix16(cutoff, (FIX16_1_POINT_8 - multfix16(FIX16_POINT_8, cutoff)));
 
-  synth_filter_set_resonance(resonance);
+  k = multfix16(FIX16_2,
+                (sinfix16((multfix16(cutoff, FIX16_PI_2))))) -
+      FIX16_ONE;
+
+  t1 = multfix16((FIX16_ONE - p), FIX16_1_POINT_386249);
+  t2 = FIX16_12 + multfix16(t1, t1);
+
+  set_resonance(resonance);
 }
 
 void synth_filter_init(audio_context_t* context) {
-  sample_rate = context->sample_rate;
+  sample_rate = FIX16_SAMPLE_RATE;
 
   memset(stage, 0, sizeof(stage));
   memset(delay, 0, sizeof(delay));
 
-  synth_filter_set_cutoff(1000.0f);
-  synth_filter_set_resonance(0.10f);
+  set_cutoff(float2fix16(1000.0f));
+  set_resonance(float2fix16(0.50f));
 }
 
 void synth_filter_process(audio_context_t* context) {
+  set_resonance(context->resonance);
+  set_cutoff(context->cutoff);
 
   for (size_t s = 0; s < BUFFER_LENGTH; ++s) {
-    // TODO: audio_out is a scaled uint16_t 
-    // needs to be fix16 (which means rewriting this filter to operate on that)
-    // or float (much easier but slower)
-    float x = context->audio_out[s] - resonance * stage[3];
+    fix16 x = context->raw[s] - multfix16(resonance, stage[3]);
 
     // Four cascaded one-pole filters (bilinear transform)
-    stage[0] = x * p + delay[0] * p - k * stage[0];
-    stage[1] = stage[0] * p + delay[1] * p - k * stage[1];
-    stage[2] = stage[1] * p + delay[2] * p - k * stage[2];
-    stage[3] = stage[2] * p + delay[3] * p - k * stage[3];
+    stage[0] =
+        multfix16(x, p) + multfix16(delay[0], p) - multfix16(k, stage[0]);
+    stage[1] = multfix16(stage[0], p) + multfix16(delay[1], p) -
+               multfix16(k, stage[1]);
+    stage[2] = multfix16(stage[1], p) + multfix16(delay[2], p) -
+               multfix16(k, stage[2]);
+    stage[3] = multfix16(stage[2], p) + multfix16(delay[3], p) -
+               multfix16(k, stage[3]);
 
     // Clipping band-limited sigmoid
-    stage[3] -= (stage[3] * stage[3] * stage[3]) / 6.0;
+    stage[3] -=
+        divfix16(multfix16(multfix16(stage[3], stage[3]), stage[3]), FIX16_6);
 
     delay[0] = x;
     delay[1] = stage[0];
     delay[2] = stage[1];
     delay[3] = stage[2];
 
-    context->audio_out[s] = stage[3];
+    context->raw[s] = stage[3];
   }
 }

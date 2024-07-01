@@ -44,4 +44,14 @@ static inline fix16 tanhfix16(fix16 x) {
       x, divfix16((FIX16_27 + x2), (FIX16_27 + multfix16(FIX16_9, x2))));
 }
 
+static inline fix16 sinfix16(fix16 x)
+{
+    const fix16 B = 83443;
+    const fix16 C = -26560;
+
+    fix16 y = multfix16(B, x) + multfix16(multfix16(C, x), absfix16(x));
+
+    return y;
+}
+
 #endif

@@ -21,7 +21,7 @@
 // 32767 is a fine sample rate anyway.
 #define SAMPLE_RATE 32767
 #define FIX16_SAMPLE_RATE 2147418112
-#define BUFFER_LENGTH 64
+#define BUFFER_LENGTH 256
 #define VOICES_LENGTH 2
 
 // TODO: this is not a reasonable place to park this code
@@ -67,14 +67,15 @@ typedef struct {
 typedef struct {
   uint16_t sample_rate;
   uint16_t* audio_out;
+  fix16* raw;
   size_t samples_elapsed;
   fix16 gain;
   tempo_t tempo;
   uint16_t delay;
   fix16 delay_gain;
 
-  float cutoff;
-  float resonance;
+  fix16 cutoff;
+  fix16 resonance;
 
   voice_t voices[VOICES_LENGTH];
 

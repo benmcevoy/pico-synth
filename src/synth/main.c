@@ -33,6 +33,7 @@
 
 static uint16_t buffer0[BUFFER_LENGTH] = {0};
 static uint16_t buffer1[BUFFER_LENGTH] = {0};
+static fix16 raw_buffer[BUFFER_LENGTH] = {0};
 static bool swap = false;
 static int pwm_dma_channel;
 static audio_context_t* context;
@@ -111,8 +112,6 @@ static void fill_write_buffer() {
       amplitude += multfix16(voice->gain, sample);
     }
 
-    synth_tempo_process(&context->tempo);
-
     // ***** ENVELOPE ******
     fix16 envelope = synth_envelope_process(&context->envelope);
     amplitude = multfix16(amplitude, envelope);
@@ -127,6 +126,7 @@ static void fill_write_buffer() {
     // *********************
 
 #ifdef USE_METRONOME
+    synth_tempo_process(&context->tempo);
     amplitude += synth_metronome_process(&context->tempo);
 #endif
 
@@ -150,10 +150,22 @@ static void fill_write_buffer() {
     amplitude = tanhfix16(amplitude);
     // *********************
 
-    // ***** CONVERT TO PWM ******
-    // final conversion to PWM
-    // amplitude value is fix16 and should be roughly between -1..1
-    // need to scale to 0..2^16
+    // final volume
+    context->envelope.envelope = envelope;
+    context->raw[i] = amplitude;
+    context->samples_elapsed++;
+  }
+
+  // ***** FILTER ******
+  synth_filter_process(context);
+  // *********************
+
+  // ***** CONVERT TO PWM ******
+  // final conversion to PWM
+  // amplitude value is fix16 and should be roughly between -1..1
+  // need to scale to 0..2^16
+  for (size_t i = 0; i < BUFFER_LENGTH; i++) {
+    fix16 amplitude = context->raw[i];
 
     // the mix value is between -1..1
     // add 1 to move it 0..2
@@ -161,18 +173,12 @@ static void fill_write_buffer() {
 
     // scale to an "about 12" bit signal in a 16-bit container
     // we should now have a number between 0..2 (or really 0..1.99999999999
-    // need to scale to the bit depth as determined by the wrap calulated on init
+    // need to scale to the bit depth as determined by the wrap calulated on
+    // init
     uint16_t out = (uint16_t)(amplitude >> bit_depth);
-    // *********************
 
-    // final volume
-    context->envelope.envelope = envelope;
     context->audio_out[i] = out;
-    context->samples_elapsed++;
   }
-
-  // ***** FILTER ******
-  //synth_filter_process(context);
   // *********************
 }
 
@@ -243,6 +249,8 @@ static void synth_dma_init(uint slice) {
 static void synth_audio_context_init() {
   context = malloc(sizeof(audio_context_t));
 
+  context->raw = raw_buffer;
+  context->audio_out = buffer1;
   context->sample_rate = SAMPLE_RATE;
   context->samples_elapsed = 0;
   context->gain = FIX16_ONE;
@@ -261,7 +269,7 @@ static void synth_audio_context_init() {
   for (int v = 0; v < VOICES_LENGTH; v++) {
     context->voices[v].gain = FIX16_POINT_5;
     context->voices[v].frequency = PITCH_C3;
-    context->voices[v].waveform = SQUARE;
+    context->voices[v].waveform = SAW;
     context->voices[v].detune = FIX16_ONE;
     context->voices[v].width = FIX16_PI;
     context->voices[v].wavetable_phase = 0;
@@ -317,10 +325,12 @@ int main() {
   printf("sample rate: %d\n", SAMPLE_RATE);
   printf("bit depth: %d\n", 16 - bit_depth);
 
+  printf("%d\n", float2fix16(4/M_PI));
+  printf("%d\n", float2fix16(-4/(M_PI*M_PI)));
+
   // multicore_launch_core1(core1_worker);
-  // midi
   core1_worker();
-  // controller
+  
   while (1) {
     tight_loop_contents();
   }

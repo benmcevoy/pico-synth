@@ -63,7 +63,7 @@ void synth_controller_task(audio_context_t* context) {
       // and makes the sound responsive
       switch (controls[i].action) {
         case ACTION_DETUNE: {
-         // map raw value to small range 0 to 0.05
+          // map raw value to small range 0 to 0.05
           fix16 d = float2fix16(value / 20480.f);
           // +/- detune each voice.
           context->voices[0].detune = FIX16_ONE - d;
@@ -95,12 +95,13 @@ void synth_controller_task(audio_context_t* context) {
           break;
 
         case ACTION_CUTOFF:
-          // max is half sample rate, about 16khz
-          context->cutoff = (context->sample_rate >> 1) * normal(value);
+          // max is quarter sample rate, about 8kHz
+          context->cutoff =
+              float2fix16((context->sample_rate >> 3) * normal(value));
           break;
 
         case ACTION_RESONANCE:
-          context->resonance = normal(value);
+          context->resonance = float2fix16(value / 2200.f);
           break;
 
         case ACTION_ATTACK:
