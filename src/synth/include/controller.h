@@ -12,7 +12,7 @@ typedef enum {
   ACTION_DELAYGAIN,
 
   ACTION_DETUNE,
-  // ACTION_WIDTH, TODO: seems no good when we have PWM generated audio
+  ACTION_WIDTH, 
 
   ACTION_CUTOFF,
   ACTION_RESONANCE,

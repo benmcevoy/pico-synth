@@ -53,6 +53,7 @@ typedef struct {
   fix16 wavetable_phase;
   fix16 gain;
   fix16 pitch_bend;
+  fix16 width;
 } voice_t;
 
 typedef struct {

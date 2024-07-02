@@ -260,9 +260,9 @@ static void synth_audio_context_init() {
   context->gain = FIX16_POINT_7;
   context->delay = 0;
   context->delay_gain = 0;
-  context->delay_enabled = true;
+  context->delay_enabled = false;
   context->metronome_enabled = false;
-  context->filter_enabled = true;
+  context->filter_enabled = false;
 
   context->envelope.state = OFF;
   context->envelope.envelope = 0;
@@ -277,7 +277,7 @@ static void synth_audio_context_init() {
   for (int v = 0; v < VOICES_LENGTH; v++) {
     context->voices[v].gain = FIX16_POINT_5;
     context->voices[v].frequency = PITCH_C3;
-    context->voices[v].waveform = SAW;
+    context->voices[v].waveform = SQUARE;
     context->voices[v].detune = FIX16_ONE;
     context->voices[v].wavetable_phase = 0;
     context->voices[v].pitch_bend = FIX16_ONE;
@@ -297,18 +297,13 @@ void init_all() {
   synth_controller_init();
 
 #ifdef USE_MIDI
-  synth_midi_init();
+  synth_midi_init(context);
 
   // init usb host
   tuh_init(BOARD_TUD_RHPORT);
 
   // read to initialise to the state of the physical controls
-  sleep_ms(100);
   synth_controller_task(context);
-  sleep_ms(200);
-  synth_midi_panic(context);
-  sleep_ms(200);
-  synth_midi_panic(context);
 #endif
 }
 

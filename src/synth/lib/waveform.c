@@ -32,9 +32,13 @@ static fix16 square(voice_t* voice) {
   // maybe if I use I2S instead?
 
   fix16 value =
-      (voice->wavetable_phase < FIX16_PI) ? FIX16_ONE : FIX16_NEGATIVE_ONE;
+      (voice->wavetable_phase < voice->width) ? FIX16_ONE : FIX16_NEGATIVE_ONE;
 
-  // TODO: this is whack as assumes a wavetable
+  voice->wavetable_stride =
+      multfix16(divfix16(multfix16(voice->frequency, voice->pitch_bend + voice->detune),
+                         FIX16_SAMPLE_RATE),
+                FIX16_TWOPI);
+
   voice->wavetable_phase += voice->wavetable_stride;
 
   if (voice->wavetable_phase > FIX16_TWOPI)

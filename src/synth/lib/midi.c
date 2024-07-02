@@ -106,12 +106,15 @@ static void process_midi_command(audio_context_t* context, uint8_t packet[4]) {
   }
 }
 
-void synth_midi_init() {}
+void synth_midi_init(audio_context_t* context) {
+  synth_midi_panic(context);
+}
 
 void synth_midi_task(audio_context_t* context, uint8_t* packet) {
   process_midi_command(context, packet);
 }
 
 void synth_midi_panic(audio_context_t* context) {
+  note_priority_index = 0;
   synth_envelope_note_off(&context->envelope);
 }

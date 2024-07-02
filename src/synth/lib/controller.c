@@ -42,12 +42,12 @@ void synth_controller_init() {
   controls[0] = (control_t){
       .channel = 0,
       .value = 0,
-      .action = ACTION_DELAY,
+      .action = ACTION_WIDTH,
   };
   controls[1] = (control_t){
       .channel = 1,
       .value = 0,
-      .action = ACTION_DELAYGAIN,
+      .action = ACTION_DETUNE,
   };  
   controls[2] = (control_t){
       .channel = 2,
@@ -82,6 +82,13 @@ void synth_controller_task(audio_context_t* context) {
           synth_waveform_set_wavetable_stride(&(context->voices[0]));
           synth_waveform_set_wavetable_stride(&(context->voices[1]));
         } break;
+
+        case ACTION_WIDTH: {
+          fix16 width = multfix16(FIX16_PI, normal(value));
+          
+          context->voices[0].width = width;
+          context->voices[1].width = width;
+        } break;        
 
         case ACTION_DELAY:
           // delay is proportional to sample rate
