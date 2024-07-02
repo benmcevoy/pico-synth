@@ -265,6 +265,7 @@ static void synth_audio_context_init() {
   context->filter_enabled = true;
 
   context->envelope.state = OFF;
+  context->envelope.envelope = 0;
   context->envelope.elapsed = 0;
   context->envelope.duration = 0;
   context->envelope.trigger_attack = false;
@@ -279,6 +280,7 @@ static void synth_audio_context_init() {
     context->voices[v].waveform = SAW;
     context->voices[v].detune = FIX16_ONE;
     context->voices[v].wavetable_phase = 0;
+    context->voices[v].pitch_bend = FIX16_ONE;
     synth_audiocontext_set_wavetable_stride(&context->voices[v]);
   }
 }
@@ -303,9 +305,10 @@ void init_all() {
   // read to initialise to the state of the physical controls
   sleep_ms(100);
   synth_controller_task(context);
-  sleep_ms(100);
+  sleep_ms(200);
   synth_midi_panic(context);
-  sleep_ms(100);
+  sleep_ms(200);
+  synth_midi_panic(context);
 #endif
 }
 

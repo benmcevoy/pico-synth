@@ -17,6 +17,14 @@
 
 #define FIX16_PI 205887
 #define FIX16_TWOPI 411774
+#define FIX16_2 131072
+#define FIX16_6 393216
+#define FIX16_8 524288
+#define FIX16_12 786432
+#define FIX16_1_POINT_8 117964
+#define FIX16_1_POINT_386249 90849
+#define FIX16_PI_2 102943
+#define FIX16_8192 536870912
 
 // TODO: hardware support is for 32x32 with a 32 bit result so we should
 // get better performance with int16_t fix14 2.14dp or something

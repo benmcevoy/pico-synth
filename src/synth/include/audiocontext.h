@@ -52,6 +52,7 @@ typedef struct {
   fix16 wavetable_read_pointer;
   fix16 wavetable_phase;
   fix16 gain;
+  fix16 pitch_bend;
 } voice_t;
 
 typedef struct {
@@ -82,11 +83,15 @@ typedef struct {
   envelope_t envelope;
 } audio_context_t;
 
+// TODO: move to waveform.h
 static inline void synth_audiocontext_set_wavetable_stride(voice_t* voice) {
   voice->wavetable_stride =
-      divfix16(multfix16(voice->frequency, voice->detune), FIX16_SAMPLE_RATE);
+      multfix16(divfix16(multfix16(voice->frequency, voice->pitch_bend + voice->detune),
+                         FIX16_SAMPLE_RATE),
+                33554432);
 }
 
+// TODO: move to envelope
 static inline fix16 synth_audiocontext_to_duration(float value) {
   return multfix16(float2fix16(value), FIX16_SAMPLE_RATE);
 }

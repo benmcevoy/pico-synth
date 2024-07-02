@@ -15,10 +15,10 @@ static fix16 read_from_wt(voice_t* voice, fix16* waveTable) {
   if (indexAbove >= WAVE_TABLE_LENGTH) indexAbove -= WAVE_TABLE_LENGTH;
 
   fix16 fraction = voice->wavetable_read_pointer - int2fix16(indexBelow);
-  fix16 value = lerpfix16(fraction, waveTable[indexBelow], waveTable[indexAbove]);
+  fix16 value =
+      lerpfix16(fraction, waveTable[indexBelow], waveTable[indexAbove]);
 
-  voice->wavetable_read_pointer +=
-      multfix16(FIX16_WAVE_TABLE_LENGTH, voice->wavetable_stride);
+  voice->wavetable_read_pointer += voice->wavetable_stride;
 
   while (voice->wavetable_read_pointer >= FIX16_WAVE_TABLE_LENGTH)
     voice->wavetable_read_pointer -= FIX16_WAVE_TABLE_LENGTH;
@@ -34,9 +34,11 @@ static fix16 square(voice_t* voice) {
   fix16 value =
       (voice->wavetable_phase < FIX16_PI) ? FIX16_ONE : FIX16_NEGATIVE_ONE;
 
-  voice->wavetable_phase += multfix16(FIX16_TWOPI, voice->wavetable_stride);
+  // TODO: this is whack as assumes a wavetable
+  voice->wavetable_phase += voice->wavetable_stride;
 
-  if (voice->wavetable_phase > FIX16_TWOPI) voice->wavetable_phase -= FIX16_TWOPI;
+  if (voice->wavetable_phase > FIX16_TWOPI)
+    voice->wavetable_phase -= FIX16_TWOPI;
 
   return value;
 }

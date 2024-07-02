@@ -22,14 +22,6 @@ static fix16 k;
 static fix16 t1;
 static fix16 t2;
 
-#define FIX16_2 131072
-#define FIX16_6 393216
-#define FIX16_8 524288
-#define FIX16_12 786432
-#define FIX16_1_POINT_8 117964
-#define FIX16_1_POINT_386249 90849
-#define FIX16_PI_2 102943
-
 static void set_resonance(fix16 r) {
   resonance = multfix16(r, divfix16((t2 + multfix16(FIX16_6, t1)),
                                     (t2 - multfix16(FIX16_6, t1))));

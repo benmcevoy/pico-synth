@@ -68,11 +68,11 @@ void synth_controller_task(audio_context_t* context) {
       // and makes the sound responsive
       switch (controls[i].action) {
         case ACTION_DETUNE: {
-          // map raw value to small range 0 to 0.05
-          fix16 d = float2fix16(value / 20480.f);
+          // map raw value to small range 0 to 0.005
+          fix16 d = float2fix16(value / 40960.f);
           // +/- detune each voice.
-          context->voices[0].detune = FIX16_ONE - d;
-          context->voices[1].detune = FIX16_ONE + d;
+          context->voices[0].detune = -d;
+          context->voices[1].detune = +d;
 
           synth_audiocontext_set_wavetable_stride(&(context->voices[0]));
           synth_audiocontext_set_wavetable_stride(&(context->voices[1]));
