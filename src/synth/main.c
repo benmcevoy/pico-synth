@@ -269,10 +269,10 @@ static void synth_audio_context_init() {
   context->envelope.elapsed = 0;
   context->envelope.duration = 0;
   context->envelope.trigger_attack = false;
-  context->envelope.attack = synth_envelope_to_duration(0.01f);
-  context->envelope.decay = synth_envelope_to_duration(0.03f);
+  context->envelope.attack = synth_envelope_to_duration(float2fix16(0.01f));
+  context->envelope.decay = synth_envelope_to_duration(float2fix16(0.03f));
   context->envelope.sustain = FIX16_POINT_7;
-  context->envelope.release = synth_envelope_to_duration(0.3f);
+  context->envelope.release = synth_envelope_to_duration(float2fix16(0.03f));
 
   for (int v = 0; v < VOICES_LENGTH; v++) {
     context->voices[v].gain = FIX16_POINT_5;

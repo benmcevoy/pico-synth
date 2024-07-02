@@ -4,6 +4,11 @@
 #include <stdlib.h>
 #include "audiocontext.h"
 
+// TODO: porlly wnat a struct here as i want to add a filter envelope
+// envelope
+// envelope depth (contour)
+// bypass - currently is a bool on audiocontext
+
 void synth_filter_init(audio_context_t* context);
 void synth_filter_process(audio_context_t* context);
 

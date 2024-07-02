@@ -13,6 +13,7 @@
 
 #define CONTROLS_COUNT 4
 #define MAX_VALUE 1024
+#define FIX16_MAXVALUE 67108864
 #define THRESHOLD 10
 
 #define NEAR_ZERO (THRESHOLD * 2)
@@ -27,8 +28,10 @@ static inline uint16_t snap(uint16_t value) {
   return value;
 }
 
-static inline float normal(uint16_t value) { return value / (float)MAX_VALUE; }
-static inline float tofix16(uint16_t value) { return value << 6; }
+/// @brief scale 10bit value to fractional part of fix16
+/// @param value 
+/// @return 
+static inline fix16 normal(uint16_t value) { return value << 5; }
 
 void synth_controller_init() {
   controller =
@@ -82,18 +85,16 @@ void synth_controller_task(audio_context_t* context) {
 
         case ACTION_DELAY:
           // delay is proportional to sample rate
-          context->delay = context->sample_rate * normal(value);
+          context->delay = multfix16(FIX16_SAMPLE_RATE, normal(value));
           break;
 
         case ACTION_DELAYGAIN:
-          // shift 6 to make 10 bit number a 16 bit number
-          context->delay_gain = tofix16(value);
+          context->delay_gain = normal(value);
           break;
 
         case ACTION_CUTOFF:
           // max is quarter sample rate, about 8kHz
-          context->cutoff =
-              float2fix16((context->sample_rate >> 3) * normal(value));
+          context->cutoff = multfix16(FIX16_SAMPLE_RATE >> 3, normal(value));
           break;
 
         case ACTION_RESONANCE:
@@ -116,7 +117,7 @@ void synth_controller_task(audio_context_t* context) {
           break;
 
         case ACTION_SUSTAIN:
-          context->envelope.sustain = float2fix16(normal(value));
+          context->envelope.sustain = normal(value);
           break;
 
         default:
