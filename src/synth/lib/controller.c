@@ -31,7 +31,7 @@ static inline uint16_t snap(uint16_t value) {
 /// @brief scale 10bit value to fractional part of fix16
 /// @param value 
 /// @return 
-static inline fix16 normal(uint16_t value) { return value << 5; }
+static inline fix16 normal(uint16_t value) { return value << 6; }
 
 void synth_controller_init() {
   controller =
