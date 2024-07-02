@@ -24,7 +24,7 @@
 #define BUFFER_LENGTH 128
 // last time I checked I can handle 32 voices, which is pretty good
 // could maybe do a polyphonic
-// keep removing floats and refactor the fixed point integert to q2.14
+// keep removing floats and refactor the fixed point integer to q2.14
 #define VOICES_LENGTH 2
 
 typedef enum { SINE = 0, SQUARE, SAW, TRIANGLE, NOISE } waveform_t;
@@ -70,6 +70,8 @@ typedef struct {
   bool metronome_enabled;
   tempo_t tempo;
 
+  fix16 mod_wheel;
+
   bool delay_enabled;
   uint16_t delay;
   fix16 delay_gain;
@@ -82,18 +84,5 @@ typedef struct {
 
   envelope_t envelope;
 } audio_context_t;
-
-// TODO: move to waveform.h
-static inline void synth_audiocontext_set_wavetable_stride(voice_t* voice) {
-  voice->wavetable_stride =
-      multfix16(divfix16(multfix16(voice->frequency, voice->pitch_bend + voice->detune),
-                         FIX16_SAMPLE_RATE),
-                33554432);
-}
-
-// TODO: move to envelope
-static inline fix16 synth_audiocontext_to_duration(float value) {
-  return multfix16(float2fix16(value), FIX16_SAMPLE_RATE);
-}
 
 #endif

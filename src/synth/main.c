@@ -269,10 +269,10 @@ static void synth_audio_context_init() {
   context->envelope.elapsed = 0;
   context->envelope.duration = 0;
   context->envelope.trigger_attack = false;
-  context->envelope.attack = synth_audiocontext_to_duration(0.01f);
-  context->envelope.decay = synth_audiocontext_to_duration(0.03f);
+  context->envelope.attack = synth_envelope_to_duration(0.01f);
+  context->envelope.decay = synth_envelope_to_duration(0.03f);
   context->envelope.sustain = FIX16_POINT_7;
-  context->envelope.release = synth_audiocontext_to_duration(0.3f);
+  context->envelope.release = synth_envelope_to_duration(0.3f);
 
   for (int v = 0; v < VOICES_LENGTH; v++) {
     context->voices[v].gain = FIX16_POINT_5;
@@ -281,7 +281,7 @@ static void synth_audio_context_init() {
     context->voices[v].detune = FIX16_ONE;
     context->voices[v].wavetable_phase = 0;
     context->voices[v].pitch_bend = FIX16_ONE;
-    synth_audiocontext_set_wavetable_stride(&context->voices[v]);
+    synth_waveform_set_wavetable_stride(&context->voices[v]);
   }
 }
 

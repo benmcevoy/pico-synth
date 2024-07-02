@@ -16,7 +16,7 @@ static void set_frequency(audio_context_t* context, fix16 f,
         voice_t* voice = &context->voices[v];
         voice->frequency = f;
         voice->waveform = waveform;
-        synth_audiocontext_set_wavetable_stride(voice);
+        synth_waveform_set_wavetable_stride(voice);
     }
 }
 

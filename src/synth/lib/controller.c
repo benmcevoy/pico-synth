@@ -1,4 +1,6 @@
 #include "../include/controller.h"
+#include "../include/envelope.h"
+#include "../include/waveform.h"
 
 #include <stdio.h>
 
@@ -74,8 +76,8 @@ void synth_controller_task(audio_context_t* context) {
           context->voices[0].detune = -d;
           context->voices[1].detune = +d;
 
-          synth_audiocontext_set_wavetable_stride(&(context->voices[0]));
-          synth_audiocontext_set_wavetable_stride(&(context->voices[1]));
+          synth_waveform_set_wavetable_stride(&(context->voices[0]));
+          synth_waveform_set_wavetable_stride(&(context->voices[1]));
         } break;
 
         case ACTION_DELAY:
@@ -100,17 +102,17 @@ void synth_controller_task(audio_context_t* context) {
 
         case ACTION_ATTACK:
           context->envelope.attack =
-              synth_audiocontext_to_duration(normal(value));
+              synth_envelope_to_duration(normal(value));
           break;
 
         case ACTION_DECAY:
           context->envelope.decay =
-              synth_audiocontext_to_duration(normal(value));
+              synth_envelope_to_duration(normal(value));
           break;
 
         case ACTION_RELEASE:
           context->envelope.release =
-              synth_audiocontext_to_duration(normal(value));
+              synth_envelope_to_duration(normal(value));
           break;
 
         case ACTION_SUSTAIN:

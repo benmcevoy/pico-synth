@@ -31,8 +31,8 @@ fix16 synth_metronome_process(tempo_t* tempo) {
 }
 
 void synth_metronome_init() {
-  synth_audiocontext_set_wavetable_stride(&voice);
-  envelope.release = synth_audiocontext_to_duration(0.1f);
+  synth_waveform_set_wavetable_stride(&voice);
+  envelope.release = synth_envelope_to_duration(0.1f);
 }
 
 #endif
