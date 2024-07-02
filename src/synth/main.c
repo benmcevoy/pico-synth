@@ -2,13 +2,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "hardware/vreg.h"
 #include "hardware/clocks.h"
 #include "hardware/dma.h"
 #include "hardware/pwm.h"
+#include "hardware/vreg.h"
 #include "include/audiocontext.h"
-#include "include/circularbuffer.h"
 #include "include/controller.h"
+#include "include/delay.h"
 #include "include/envelope.h"
 #include "include/filter.h"
 #include "include/fixedpoint.h"
@@ -16,7 +16,6 @@
 #include "include/metronome.h"
 #include "include/midi.h"
 #include "include/pitchtable.h"
-#include "include/tempo.h"
 #include "include/waveform.h"
 #include "pico/multicore.h"
 #include "pico/stdlib.h"
@@ -108,10 +107,12 @@ static void fill_write_buffer() {
 
       fix16 sample = synth_waveform_sample(voice);
 
-      amplitude += multfix16(voice->gain, sample);
+      amplitude += multfix16(voice->velocity, sample);
     }
 
     // ***** ENVELOPE ******
+    context->filter.envelope.envelope =
+        synth_envelope_process(&context->filter.envelope);
     fix16 envelope = synth_envelope_process(&context->envelope);
     amplitude = multfix16(amplitude, envelope);
     // *********************
@@ -137,7 +138,7 @@ static void fill_write_buffer() {
   }
 
   // ***** FILTER ******
-  if (context->filter_enabled) synth_filter_process(context);
+  synth_filter_process(context);
   // *********************
 
   // ***** CONVERT TO PWM ******
@@ -147,22 +148,13 @@ static void fill_write_buffer() {
   for (size_t i = 0; i < BUFFER_LENGTH; i++) {
     fix16 amplitude = context->raw[i];
 
-
     // **** DELAY/ECHO *****
-    if (context->delay_enabled) {
-      // apply feedback
-      amplitude = amplitude + multfix16(multfix16(synth_circularbuffer_read(),
-                                                  FIX16_POINT_7),
-                                        context->delay_gain);
-      synth_circularbuffer_write(amplitude, context->delay);
-    }
+    amplitude += synth_delay_process(&context->delay, amplitude);
+    // *********************
     
     // **** METRONOME *****
     // metronome added after effects
-    if (context->metronome_enabled) {
-      synth_tempo_process(&context->tempo);
-      amplitude += synth_metronome_process(&context->tempo);
-    }
+    amplitude += synth_metronome_process(&context->metronome);
     // *********************
 
     // ***** COMPRESS ******
@@ -181,14 +173,14 @@ static void fill_write_buffer() {
     // init
     uint16_t out = (uint16_t)(amplitude >> bit_depth);
 
-    context->audio_out[i] = out;
+    context->pwm_out[i] = out;
   }
   // *********************
 }
 
 static void __isr __time_critical_func(dma_irq_handler)() {
   // cycle buffers
-  context->audio_out = swap ? buffer0 : buffer1;
+  context->pwm_out = swap ? buffer0 : buffer1;
   swap = !swap;
 
   // ack irq
@@ -254,15 +246,33 @@ static void synth_audio_context_init() {
   context = malloc(sizeof(audio_context_t));
 
   context->raw = raw_buffer;
-  context->audio_out = buffer1;
+  context->pwm_out = buffer1;
   context->sample_rate = SAMPLE_RATE;
   context->samples_elapsed = 0;
   context->gain = FIX16_POINT_7;
-  context->delay = 0;
-  context->delay_gain = 0;
-  context->delay_enabled = false;
-  context->metronome_enabled = false;
-  context->filter_enabled = false;
+
+  context->delay.delay = 0;
+  context->delay.gain = 0;
+  context->delay.enabled = true;
+
+  context->metronome.enabled = false;
+
+  context->filter.enabled = true;
+  context->filter.follow_voice_envelope = true;
+  context->filter.resonance = 0;
+  context->filter.cutoff = 0;
+  context->filter.envelope.state = OFF;
+  context->filter.envelope.envelope = 0;
+  context->filter.envelope.elapsed = 0;
+  context->filter.envelope.duration = 0;
+  context->filter.envelope.attack =
+      synth_envelope_to_duration(float2fix16(0.01f));
+  context->filter.envelope.decay =
+      synth_envelope_to_duration(float2fix16(0.03f));
+  context->filter.envelope.sustain = FIX16_POINT_7;
+  context->filter.envelope.release =
+      synth_envelope_to_duration(float2fix16(0.4f));
+  context->filter.envelope_depth = FIX16_ONE;
 
   context->envelope.state = OFF;
   context->envelope.envelope = 0;
@@ -275,9 +285,9 @@ static void synth_audio_context_init() {
   context->envelope.release = synth_envelope_to_duration(float2fix16(0.03f));
 
   for (int v = 0; v < VOICES_LENGTH; v++) {
-    context->voices[v].gain = FIX16_POINT_5;
+    context->voices[v].velocity = FIX16_POINT_5;
     context->voices[v].frequency = PITCH_C3;
-    context->voices[v].waveform = SQUARE;
+    context->voices[v].waveform = SAW;
     context->voices[v].detune = FIX16_ONE;
     context->voices[v].wavetable_phase = 0;
     context->voices[v].pitch_bend = FIX16_ONE;
@@ -288,10 +298,9 @@ static void synth_audio_context_init() {
 void init_all() {
   board_init();
   synth_audio_context_init();
-  synth_tempo_init(&context->tempo, 120);
-  synth_metronome_init();
+  synth_metronome_init(&context->metronome, 120);
   synth_filter_init(context);
-  synth_circularbuffer_init();
+  synth_delay_init();
   uint slice = synth_pwm_init();
   synth_dma_init(slice);
   synth_controller_init();

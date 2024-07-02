@@ -3,12 +3,11 @@
 
 #include "audiocontext.h"
 #include "pitchtable.h"
-#include "tempo.h"
 #include "waveform.h"
 
 static voice_t voice = {.detune = FIX16_ONE,
                         .frequency = PITCH_A4,
-                        .gain = FIX16_POINT_3,
+                        .velocity = FIX16_POINT_3,
                         .waveform = SINE};
 
 static envelope_t envelope = {.attack = 0,
@@ -19,20 +18,43 @@ static envelope_t envelope = {.attack = 0,
                               .trigger_attack = false,
                               .envelope = FIX16_ONE};
 
-fix16 synth_metronome_process(tempo_t* tempo) {
+static uint32_t interval = 0;
+
+static void tick(metronome_t* metronome) {
+  if (--interval == 0) {
+    metronome->is_beat = true;
+    interval = metronome->duration_in_samples;
+    return;
+  }
+
+  metronome->is_beat = false;
+  return;
+}
+
+void synth_metronome_set_bpm(metronome_t* metronome, uint8_t bpm) {
+  metronome->duration_in_samples = 60 / (float)bpm * SAMPLE_RATE;
+  interval = metronome->duration_in_samples;
+}
+
+void synth_metronome_init(metronome_t* metronome, uint8_t bpm) {
+  synth_metronome_set_bpm(metronome, bpm);
+  synth_waveform_set_wavetable_stride(&voice);
+  envelope.release = synth_envelope_to_duration(FIX16_POINT_1);
+}
+
+fix16 synth_metronome_process(metronome_t* metronome) {
+  tick(metronome);
+
+  if(!metronome->enabled) return 0;
+
   fix16 sample = synth_waveform_sample(&voice);
 
-  envelope.trigger_attack = tempo->isBeat;
+  envelope.trigger_attack = metronome->is_beat;
 
-  sample = multfix16(voice.gain,
+  sample = multfix16(voice.velocity,
                      multfix16(sample, synth_envelope_process(&envelope)));
 
   return sample;
-}
-
-void synth_metronome_init() {
-  synth_waveform_set_wavetable_stride(&voice);
-  envelope.release = synth_envelope_to_duration(FIX16_POINT_1);
 }
 
 #endif

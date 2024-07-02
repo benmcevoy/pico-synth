@@ -18,7 +18,8 @@
 // FIX16_SCALED_SAMPLE_RATE is (SAMPLE_RATE >> SAMPLE_RATE_SCALE_FACTOR) as
 // fix16 e.g << 16
 
-// 32767 is a fine sample rate anyway.
+// 32767 is 0111 1111 1111 1111 0000 0000 0000 0000  which is the maximum
+// integer value we can fit in fix16 32767 is a fine sample rate anyway.
 #define SAMPLE_RATE 32767
 #define FIX16_SAMPLE_RATE 2147418112
 #define BUFFER_LENGTH 128
@@ -44,46 +45,55 @@ typedef struct {
 } envelope_t;
 
 typedef struct {
-  /// @brief fractional value between 0..1
   fix16 detune;
   fix16 frequency;
   waveform_t waveform;
   fix16 wavetable_stride;
   fix16 wavetable_read_pointer;
   fix16 wavetable_phase;
-  fix16 gain;
+  fix16 velocity;
   fix16 pitch_bend;
   fix16 width;
 } voice_t;
 
 typedef struct {
   uint32_t duration_in_samples;
-  bool isBeat;
-} tempo_t;
+  bool is_beat;
+  bool enabled;
+} metronome_t;
 
 typedef struct {
-  uint16_t sample_rate;
-  uint16_t* audio_out;
-  fix16* raw;
-  size_t samples_elapsed;
-  fix16 gain;
-
-  bool metronome_enabled;
-  tempo_t tempo;
-
-  fix16 mod_wheel;
-
-  bool delay_enabled;
-  uint16_t delay;
-  fix16 delay_gain;
-
-  bool filter_enabled;
   fix16 cutoff;
   fix16 resonance;
+  envelope_t envelope;
+  fix16 envelope_depth;
+  bool enabled;
+  bool follow_voice_envelope;
+} filter_t;
+
+typedef struct {
+  bool enabled;
+  uint16_t delay;
+  fix16 gain;
+} delay_t;
+
+typedef struct {
+  size_t samples_elapsed;
+  uint16_t sample_rate;
+  
+  uint16_t* pwm_out;
+  fix16* raw;
+  
+  fix16 gain;
+  fix16 mod_wheel;
+
+  metronome_t metronome;
+  filter_t filter;
+  delay_t delay;
+  envelope_t envelope;
 
   voice_t voices[VOICES_LENGTH];
 
-  envelope_t envelope;
 } audio_context_t;
 
 #endif

@@ -18,18 +18,19 @@ static uint8_t note_priority_index = 0;
 static inline fix16 normal(uint8_t midi_value) { return midi_value << 9; }
 
 static void note_on(audio_context_t* context, uint8_t note, uint8_t velocity) {
-  fix16 gain = normal(velocity);
+  fix16 v = normal(velocity);
   fix16 pitch = synth_midi_frequency_from_midi_note[note];
 
   for (int i = 0; i < VOICES_LENGTH; i++) {
     voice_t* voice = &context->voices[i];
 
-    voice->gain = gain;
+    voice->velocity = v;
     voice->frequency = pitch;
     synth_waveform_set_wavetable_stride(voice);
   }
 
   synth_envelope_note_on(&context->envelope);
+  synth_envelope_note_on(&context->filter.envelope);
 
   note_priority[note_priority_index] = note;
 
@@ -51,6 +52,7 @@ static void note_off(audio_context_t* context, uint8_t note) {
 
   if (note_priority_index == 0) {
     synth_envelope_note_off(&context->envelope);
+    synth_envelope_note_off(&context->filter.envelope);
     return;
   }
 
@@ -117,4 +119,5 @@ void synth_midi_task(audio_context_t* context, uint8_t* packet) {
 void synth_midi_panic(audio_context_t* context) {
   note_priority_index = 0;
   synth_envelope_note_off(&context->envelope);
+  synth_envelope_note_off(&context->filter.envelope);
 }

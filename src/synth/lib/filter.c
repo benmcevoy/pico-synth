@@ -32,8 +32,7 @@ static void set_cutoff(fix16 c) {
 
   p = multfix16(cutoff, (FIX16_1_POINT_8 - multfix16(FIX16_POINT_8, cutoff)));
 
-  k = multfix16(FIX16_2,
-                (sinfix16((multfix16(cutoff, FIX16_PI_2))))) -
+  k = multfix16(FIX16_2, (sinfix16((multfix16(cutoff, FIX16_PI_2))))) -
       FIX16_ONE;
 
   t1 = multfix16((FIX16_ONE - p), FIX16_1_POINT_386249);
@@ -48,21 +47,23 @@ void synth_filter_init(audio_context_t* context) {
   memset(stage, 0, sizeof(stage));
   memset(delay, 0, sizeof(delay));
 
-  set_cutoff(float2fix16(1000.0f));
-  set_resonance(float2fix16(0.50f));
+  set_resonance(context->filter.resonance);
+  set_cutoff(context->filter.cutoff);
 }
 
 void synth_filter_process(audio_context_t* context) {
-  set_resonance(context->resonance);
-  //set_cutoff(context->cutoff);
+  if (!context->filter.enabled) return;
 
-  // simple envelope follower
-  set_cutoff(multfix16(context->cutoff, context->envelope.envelope));
+  // follow voice envelope or filter envelope
+  fix16 envelope = context->filter.follow_voice_envelope ? context->envelope.envelope
+                                          : context->filter.envelope.envelope;
+
+  set_resonance(context->filter.resonance);
+
+  set_cutoff(multfix16(multfix16(context->filter.cutoff, envelope),
+                       context->filter.envelope_depth));
 
   for (size_t s = 0; s < BUFFER_LENGTH; ++s) {
-
-    
-
     fix16 x = context->raw[s] - multfix16(resonance, stage[3]);
 
     // Four cascaded one-pole filters (bilinear transform)

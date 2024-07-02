@@ -6,13 +6,12 @@ set(TINYUSB_FAMILY_PROJECT_NAME_PREFIX "tinyusb_dev_")
 add_executable(${projectName} main.c 
     usb_midi_host_app_driver.c
     usb_midi_host.c
-    lib/circularbuffer.c
+    lib/delay.c
     lib/controller.c
     lib/envelope.c
     lib/filter.c
     lib/mcp3008.c
     lib/midi.c
-    lib/tempo.c
     lib/waveform.c)
 
 #pico_set_binary_type(${projectName} no_flash)

@@ -81,13 +81,13 @@ void synth_test_play(audio_context_t* context) {
     synth_envelope_note_off(&context->envelope);
     sleep_ms(1200);
 
-    context->delay_enabled = true;
-    context->delay = SAMPLE_RATE /4.f;
-    context->delay_gain = float2fix16(0.5f);
+    context->delay.enabled = true;
+    context->delay.delay = SAMPLE_RATE /4.f;
+    context->delay.gain = float2fix16(0.5f);
 
     test_midi_pattern(context, context->voices[0].waveform);
 
-    context->delay_enabled = false;
+    context->delay.enabled = false;
 
     // test_waveform(context, NOISE);
     // test_waveform(context, TRIANGLE);

@@ -42,12 +42,12 @@ void synth_controller_init() {
   controls[0] = (control_t){
       .channel = 0,
       .value = 0,
-      .action = ACTION_WIDTH,
+      .action = ACTION_DELAY,
   };
   controls[1] = (control_t){
       .channel = 1,
       .value = 0,
-      .action = ACTION_DETUNE,
+      .action = ACTION_DELAYGAIN,
   };  
   controls[2] = (control_t){
       .channel = 2,
@@ -92,20 +92,20 @@ void synth_controller_task(audio_context_t* context) {
 
         case ACTION_DELAY:
           // delay is proportional to sample rate
-          context->delay = multfix16(FIX16_SAMPLE_RATE, normal(value));
+          context->delay.delay = fix2int16(multfix16(FIX16_SAMPLE_RATE, normal(value)));
           break;
 
         case ACTION_DELAYGAIN:
-          context->delay_gain = normal(value);
+          context->delay.gain = normal(value);
           break;
 
         case ACTION_CUTOFF:
           // max is quarter sample rate, about 8kHz
-          context->cutoff = multfix16(FIX16_SAMPLE_RATE >> 3, normal(value));
+          context->filter.cutoff = multfix16(FIX16_SAMPLE_RATE >> 3, normal(value));
           break;
 
         case ACTION_RESONANCE:
-          context->resonance = float2fix16(value / 2200.f);
+          context->filter.resonance = float2fix16(value / 2200.f);
           break;
 
         case ACTION_ATTACK:
