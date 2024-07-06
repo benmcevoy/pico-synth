@@ -53,7 +53,7 @@ void synth_controller_init() {
   controls[2] = (control_t){
       .channel = 2,
       .value = 0,
-      .action = ACTION_CUTOFF,
+      .action = ACTION_DETUNE,
   };
   controls[3] = (control_t){
       .channel = 3,
