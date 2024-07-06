@@ -249,13 +249,14 @@ static void synth_audio_context_init() {
 
   context->delay.enabled = true;
   context->metronome.enabled = false;
-  context->filter.enabled = false;
+  context->filter.enabled = true;
 
   context->raw = raw_buffer;
   context->pwm_out = buffer1;
   context->sample_rate = SAMPLE_RATE;
   context->samples_elapsed = 0;
   context->gain = FIX16_POINT_7;
+  context->mod_wheel = 0;
 
   context->delay.delay_in_samples = 0;
   context->delay.feedback = 0;
@@ -292,6 +293,7 @@ static void synth_audio_context_init() {
     context->voices[v].waveform = SAW;
     context->voices[v].detune = FIX16_ONE;
     context->voices[v].wavetable_phase = 0;
+    context->voices[v].width = 0;
     context->voices[v].pitch_bend = FIX16_ONE;
     synth_waveform_set_wavetable_stride(&context->voices[v]);
   }
@@ -320,28 +322,37 @@ void init_all() {
 
 void core1_worker() {
   while (true) {
+    
 #ifndef USE_MIDI
     // TODO: the player has a load of sleeps so the controller does not update
     // synth_controller_task(context);
+    // also cannot blink led for the same reason
     synth_test_play(context);
 #else
+    synth_led_blink_task();
     // tinyusb host task
     tuh_task();
-    synth_led_blink_task();
     synth_controller_task(context);
 #endif
   }
 }
 
 int main() {
+  // can go to 420MHz set vreg to 1.3
   vreg_set_voltage(VREG_VOLTAGE_1_15);
   set_sys_clock_khz(320000, true);
   stdio_init_all();
   init_all();
 
+uint systemClockHz = frequency_count_khz(CLOCKS_FC0_SRC_VALUE_CLK_SYS) / 1000;
+
   printf("\n----------------------\nSynth starting.\n");
-  printf("sample rate: %d\n", SAMPLE_RATE);
+  printf("system clock: %uMHz\n", systemClockHz);
+  
+  printf("sample rate: %dHz\n", SAMPLE_RATE);
   printf("bit depth: %d\n", 16 - bit_depth);
+
+  synth_audiocontext_debug(context);
 
   // multicore_launch_core1(core1_worker);
   core1_worker();
