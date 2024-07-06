@@ -1,6 +1,7 @@
 #include "../include/controller.h"
 #include "../include/envelope.h"
 #include "../include/waveform.h"
+#include "../include/delay.h"
 
 #include <stdio.h>
 
@@ -47,7 +48,7 @@ void synth_controller_init() {
   controls[1] = (control_t){
       .channel = 1,
       .value = 0,
-      .action = ACTION_DELAYGAIN,
+      .action = ACTION_DELAY_FEEDBACK,
   };  
   controls[2] = (control_t){
       .channel = 2,
@@ -92,11 +93,12 @@ void synth_controller_task(audio_context_t* context) {
 
         case ACTION_DELAY:
           // delay is proportional to sample rate
-          context->delay.delay = fix2int16(multfix16(FIX16_SAMPLE_RATE, normal(value)));
+          context->delay.delay_in_samples = fix2int16(multfix16(DELAY_BUFFER_SIZE_FIX16, normal(value)));
           break;
 
-        case ACTION_DELAYGAIN:
-          context->delay.gain = normal(value);
+        case ACTION_DELAY_FEEDBACK:
+          // feedback can get close 1.0 which makes for whacky sounds
+          context->delay.feedback = normal(value);
           break;
 
         case ACTION_CUTOFF:

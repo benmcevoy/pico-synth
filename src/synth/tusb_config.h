@@ -30,6 +30,9 @@
  extern "C" {
 #endif
 
+// #undef CFG_TUSB_DEBUG
+// #define CFG_TUSB_DEBUG  3
+
 
 // RHPort number used for device can be defined by board.mk, default to port 0
 #ifndef BOARD_TUD_RHPORT

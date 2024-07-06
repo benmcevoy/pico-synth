@@ -73,8 +73,9 @@ typedef struct {
 
 typedef struct {
   bool enabled;
-  uint16_t delay;
-  fix16 gain;
+  /// @brief number of samples to delay by
+  uint16_t delay_in_samples;
+  fix16 feedback;
 } delay_t;
 
 typedef struct {

@@ -44,7 +44,7 @@ static fix16 dither() {
   // mask off the bottom 8 bits
   uint8_t p = synth_waveform_noise() & 0x00000ff;
 
-  // TODO: not sure abouth this.  guide is to use 2 LSB of dither
+  // TODO: not sure about this.  guide is to use 2 LSB of dither
   // not sure if that is 2 LSB on this 32 bit number or on the 12 bit quantized
   // value later? I *think* this setting of _bitDepth + 3 sounds better? but I
   // could be deluding myself I looked at some frequency spectrums with this
@@ -141,6 +141,8 @@ static void fill_write_buffer() {
   synth_filter_process(context);
   // *********************
 
+  synth_delay_set_delay(&context->delay);
+
   // ***** CONVERT TO PWM ******
   // final conversion to PWM
   // amplitude value is fix16 and should be roughly between -1..1
@@ -151,7 +153,7 @@ static void fill_write_buffer() {
     // **** DELAY/ECHO *****
     amplitude += synth_delay_process(&context->delay, amplitude);
     // *********************
-    
+
     // **** METRONOME *****
     // metronome added after effects
     amplitude += synth_metronome_process(&context->metronome);
@@ -245,19 +247,19 @@ static void synth_dma_init(uint slice) {
 static void synth_audio_context_init() {
   context = malloc(sizeof(audio_context_t));
 
+  context->delay.enabled = true;
+  context->metronome.enabled = false;
+  context->filter.enabled = false;
+
   context->raw = raw_buffer;
   context->pwm_out = buffer1;
   context->sample_rate = SAMPLE_RATE;
   context->samples_elapsed = 0;
   context->gain = FIX16_POINT_7;
 
-  context->delay.delay = 0;
-  context->delay.gain = 0;
-  context->delay.enabled = true;
+  context->delay.delay_in_samples = 0;
+  context->delay.feedback = 0;
 
-  context->metronome.enabled = false;
-
-  context->filter.enabled = true;
   context->filter.follow_voice_envelope = true;
   context->filter.resonance = 0;
   context->filter.cutoff = 0;

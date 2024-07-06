@@ -82,8 +82,8 @@ void synth_test_play(audio_context_t* context) {
     sleep_ms(1200);
 
     context->delay.enabled = true;
-    context->delay.delay = SAMPLE_RATE /4.f;
-    context->delay.gain = float2fix16(0.5f);
+    context->delay.delay_in_samples = SAMPLE_RATE >> 2;
+    context->delay.feedback = FIX16_POINT_5;
 
     test_midi_pattern(context, context->voices[0].waveform);
 

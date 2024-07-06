@@ -8,7 +8,8 @@
 static voice_t voice = {.detune = FIX16_ONE,
                         .frequency = PITCH_A4,
                         .velocity = FIX16_POINT_3,
-                        .waveform = SINE};
+                        .width = FIX16_POINT_5,
+                        .waveform = SQUARE};
 
 static envelope_t envelope = {.attack = 0,
                               .decay = 0,
