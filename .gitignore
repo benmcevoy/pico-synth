@@ -10,6 +10,10 @@ src/build/
 nohup.out
 .envrc
 
+/kicad/controller-backups/
+
 !./src/build/synth/synth.uf2
 !./src/build/synth/synth.elf
 !./src/build/synth/deploy.sh
+
+
