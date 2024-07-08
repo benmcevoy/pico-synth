@@ -7,9 +7,9 @@
 #define FIX16_WAVE_TABLE_LENGTH 33554432
 
 // TODO: probably should be set_frequency on voice?
-static inline void synth_waveform_set_wavetable_stride(voice_t* voice) {
+static inline void synth_waveform_set_wavetable_stride(voice_t* voice, fix16 pitch_bend) {
   voice->wavetable_stride =
-      multfix16(divfix16(multfix16(voice->frequency, voice->pitch_bend + voice->detune),
+      multfix16(divfix16(multfix16(voice->frequency, pitch_bend + voice->detune),
                          FIX16_SAMPLE_RATE),
                 FIX16_WAVE_TABLE_LENGTH);
 }
@@ -18,7 +18,7 @@ static inline void synth_waveform_set_wavetable_stride(voice_t* voice) {
  *
  * \param context The audio context
  */
-fix16 synth_waveform_sample(voice_t* voice);
+fix16 synth_waveform_sample(voice_t* voice, fix16 pitch_bend);
 
 fix16 synth_waveform_noise();
 

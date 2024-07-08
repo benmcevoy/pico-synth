@@ -1,11 +1,11 @@
 #include "../include/controller.h"
-#include "../include/envelope.h"
-#include "../include/waveform.h"
-#include "../include/delay.h"
 
 #include <stdio.h>
 
+#include "../include/delay.h"
+#include "../include/envelope.h"
 #include "../include/mcp3008.h"
+#include "../include/waveform.h"
 
 #define SPI_CLOCK 2
 #define SPI_TX 3
@@ -30,8 +30,8 @@ static inline uint16_t snap(uint16_t value) {
 }
 
 /// @brief scale 10bit value to fractional part of fix16
-/// @param value 
-/// @return 
+/// @param value
+/// @return
 static inline fix16 normal(uint16_t value) { return value << 6; }
 
 void synth_controller_init() {
@@ -49,7 +49,7 @@ void synth_controller_init() {
       .channel = 1,
       .value = 0,
       .action = ACTION_DELAY_FEEDBACK,
-  };  
+  };
   controls[2] = (control_t){
       .channel = 2,
       .value = 0,
@@ -80,20 +80,23 @@ void synth_controller_task(audio_context_t* context) {
           context->voices[0].detune = -d;
           context->voices[1].detune = +d;
 
-          synth_waveform_set_wavetable_stride(&(context->voices[0]));
-          synth_waveform_set_wavetable_stride(&(context->voices[1]));
+          synth_waveform_set_wavetable_stride(&(context->voices[0]),
+                                              context->pitch_bend);
+          synth_waveform_set_wavetable_stride(&(context->voices[1]),
+                                              context->pitch_bend);
         } break;
 
         case ACTION_WIDTH: {
           fix16 width = multfix16(FIX16_PI, normal(value));
-          
+
           context->voices[0].width = width;
           context->voices[1].width = width;
-        } break;        
+        } break;
 
         case ACTION_DELAY:
           // delay is proportional to sample rate
-          context->delay.delay_in_samples = fix2int16(multfix16(DELAY_BUFFER_SIZE_FIX16, normal(value)));
+          context->delay.delay_in_samples =
+              fix2int16(multfix16(DELAY_BUFFER_SIZE_FIX16, normal(value)));
           break;
 
         case ACTION_DELAY_FEEDBACK:
@@ -101,9 +104,14 @@ void synth_controller_task(audio_context_t* context) {
           context->delay.feedback = normal(value);
           break;
 
+        case ACTION_DELAY_DRY_WET_MIX:
+          context->delay.dry_wet_mix = normal(value);
+          break;
+
         case ACTION_CUTOFF:
           // max is quarter sample rate, about 8kHz
-          context->filter.cutoff = multfix16(FIX16_SAMPLE_RATE >> 3, normal(value));
+          context->filter.cutoff =
+              multfix16(FIX16_SAMPLE_RATE >> 3, normal(value));
           break;
 
         case ACTION_RESONANCE:
@@ -111,18 +119,15 @@ void synth_controller_task(audio_context_t* context) {
           break;
 
         case ACTION_ATTACK:
-          context->envelope.attack =
-              synth_envelope_to_duration(normal(value));
+          context->envelope.attack = synth_envelope_to_duration(normal(value));
           break;
 
         case ACTION_DECAY:
-          context->envelope.decay =
-              synth_envelope_to_duration(normal(value));
+          context->envelope.decay = synth_envelope_to_duration(normal(value));
           break;
 
         case ACTION_RELEASE:
-          context->envelope.release =
-              synth_envelope_to_duration(normal(value));
+          context->envelope.release = synth_envelope_to_duration(normal(value));
           break;
 
         case ACTION_SUSTAIN:

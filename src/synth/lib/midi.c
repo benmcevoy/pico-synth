@@ -21,12 +21,15 @@ static void note_on(audio_context_t* context, uint8_t note, uint8_t velocity) {
   fix16 v = normal(velocity);
   fix16 pitch = synth_midi_frequency_from_midi_note[note];
 
+  context->velocity = v;
+
+
   for (int i = 0; i < VOICES_LENGTH; i++) {
     voice_t* voice = &context->voices[i];
 
-    voice->velocity = v;
+    
     voice->frequency = pitch;
-    synth_waveform_set_wavetable_stride(voice);
+    synth_waveform_set_wavetable_stride(voice, context->pitch_bend);
   }
 
   synth_envelope_note_on(&context->envelope);
@@ -63,7 +66,7 @@ static void note_off(audio_context_t* context, uint8_t note) {
     voice_t* voice = &context->voices[i];
 
     voice->frequency = pitch;
-    synth_waveform_set_wavetable_stride(voice);
+    synth_waveform_set_wavetable_stride(voice, context->pitch_bend);
   }
 }
 
@@ -76,10 +79,12 @@ static void pitch_bend(audio_context_t* context, uint8_t lsb, uint8_t msb) {
   // TODO: get rid of float
   fix16 ratio = float2fix16(powf(2.f, fix2float16(bend)));
 
+  context->pitch_bend = ratio;
+
   for (int i = 0; i < VOICES_LENGTH; i++) {
     voice_t* voice = &context->voices[i];
-    voice->pitch_bend = ratio;
-    synth_waveform_set_wavetable_stride(voice);
+    
+    synth_waveform_set_wavetable_stride(voice, context->pitch_bend);
   }
 }
 

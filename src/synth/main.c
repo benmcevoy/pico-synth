@@ -105,9 +105,9 @@ static void fill_write_buffer() {
     for (int v = 0; v < VOICES_LENGTH; v++) {
       voice_t* voice = &context->voices[v];
 
-      fix16 sample = synth_waveform_sample(voice);
+      fix16 sample = synth_waveform_sample(voice, context->pitch_bend);
 
-      amplitude += multfix16(voice->velocity, sample);
+      amplitude += multfix16(context->velocity, sample);
     }
 
     // ***** ENVELOPE ******
@@ -257,9 +257,12 @@ static void synth_audio_context_init() {
   context->samples_elapsed = 0;
   context->gain = FIX16_POINT_7;
   context->mod_wheel = 0;
+  context->pitch_bend = 0;
+  context->velocity = FIX16_POINT_5;
 
   context->delay.delay_in_samples = 0;
   context->delay.feedback = 0;
+  context->delay.dry_wet_mix = FIX16_POINT_5;
 
   context->filter.follow_voice_envelope = true;
   context->filter.resonance = 0;
@@ -288,14 +291,12 @@ static void synth_audio_context_init() {
   context->envelope.release = synth_envelope_to_duration(float2fix16(0.03f));
 
   for (int v = 0; v < VOICES_LENGTH; v++) {
-    context->voices[v].velocity = FIX16_POINT_5;
     context->voices[v].frequency = PITCH_C3;
     context->voices[v].waveform = SAW;
     context->voices[v].detune = FIX16_ONE;
     context->voices[v].wavetable_phase = 0;
     context->voices[v].width = 0;
-    context->voices[v].pitch_bend = FIX16_ONE;
-    synth_waveform_set_wavetable_stride(&context->voices[v]);
+    synth_waveform_set_wavetable_stride(&context->voices[v], 0);
   }
 }
 

@@ -7,7 +7,6 @@
 
 static voice_t voice = {.detune = FIX16_ONE,
                         .frequency = PITCH_A4,
-                        .velocity = FIX16_POINT_3,
                         .width = FIX16_POINT_5,
                         .waveform = SQUARE};
 
@@ -39,21 +38,20 @@ void synth_metronome_set_bpm(metronome_t* metronome, uint8_t bpm) {
 
 void synth_metronome_init(metronome_t* metronome, uint8_t bpm) {
   synth_metronome_set_bpm(metronome, bpm);
-  synth_waveform_set_wavetable_stride(&voice);
+  synth_waveform_set_wavetable_stride(&voice, 0);
   envelope.release = synth_envelope_to_duration(FIX16_POINT_1);
 }
 
 fix16 synth_metronome_process(metronome_t* metronome) {
   tick(metronome);
 
-  if(!metronome->enabled) return 0;
+  if (!metronome->enabled) return 0;
 
-  fix16 sample = synth_waveform_sample(&voice);
+  fix16 sample = synth_waveform_sample(&voice, 0);
 
   envelope.trigger_attack = metronome->is_beat;
 
-  sample = multfix16(voice.velocity,
-                     multfix16(sample, synth_envelope_process(&envelope)));
+  sample = multfix16(sample, synth_envelope_process(&envelope));
 
   return sample;
 }

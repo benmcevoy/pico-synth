@@ -24,7 +24,7 @@
 #define SAMPLE_RATE 32767
 #define FIX16_SAMPLE_RATE 2147418112
 #define BUFFER_LENGTH 128
-// last time I checked I can handle 32 voices, which is pretty good
+// last time I checked I can handle 32 oscillators, which is pretty good
 // could maybe do a polyphonic
 // keep removing floats and refactor the fixed point integer to q2.14
 #define VOICES_LENGTH 2
@@ -46,15 +46,14 @@ typedef struct {
 } envelope_t;
 
 typedef struct {
+  fix16 width;
   fix16 detune;
   fix16 frequency;
   waveform_t waveform;
+
   fix16 wavetable_stride;
   fix16 wavetable_read_pointer;
   fix16 wavetable_phase;
-  fix16 velocity;
-  fix16 pitch_bend;
-  fix16 width;
 } voice_t;
 
 typedef struct {
@@ -77,6 +76,7 @@ typedef struct {
   /// @brief number of samples to delay by
   uint16_t delay_in_samples;
   fix16 feedback;
+  fix16 dry_wet_mix;
 } delay_t;
 
 typedef struct {
@@ -88,6 +88,8 @@ typedef struct {
 
   fix16 gain;
   fix16 mod_wheel;
+  fix16 velocity;
+  fix16 pitch_bend;
 
   metronome_t metronome;
   filter_t filter;
@@ -128,11 +130,14 @@ static void synth_audiocontext_debug(audio_context_t* context) {
   printf("\tgain: %f,\n", fix2float16(context->gain));
   printf("\tsample_rate: %u,\n", (context->sample_rate));
   printf("\tmod_wheel: %f,\n", fix2float16(context->mod_wheel));
+  printf("\tvelocity: %f,\n", fix2float16(context->velocity));
+  printf("\tpitch_bend: %f,\n", fix2float16(context->pitch_bend));
 
   printf("\tdelay: {\n");
   printf("\t\tenabled: %d,\n", (context->delay.enabled));
   printf("\t\tdelay_in_samples: %u,\n", (context->delay.delay_in_samples));
   printf("\t\tfeedback: %f,\n", fix2float16(context->delay.feedback));
+  printf("\t\tdry_wet_mix: %f,\n", fix2float16(context->delay.dry_wet_mix));
   printf("\t}\n");
 
   printf("\tenvelope: {\n");
@@ -145,18 +150,14 @@ static void synth_audiocontext_debug(audio_context_t* context) {
   printf("\tvoices[0]: {\n");
   printf("\t\tdetune: %f,\n", fix2float16(context->voices[0].detune));
   printf("\t\twidth: %f,\n", fix2float16(context->voices[0].width));
-  printf("\t\tpitch_bend: %f,\n", fix2float16(context->voices[0].pitch_bend));
   printf("\t\tfrequency: %f,\n", fix2float16(context->voices[0].frequency));
-  printf("\t\tvelocity: %f,\n", fix2float16(context->voices[0].velocity));
   printf("\t\tvwaveform: %s,\n", synth_audiocontext_debug_waveform_to_string(context->voices[0].waveform));
   printf("\t}\n");
 
   printf("\tvoices[1]: {\n");
   printf("\t\tdetune: %f,\n", fix2float16(context->voices[1].detune));
   printf("\t\twidth: %f,\n", fix2float16(context->voices[1].width));
-  printf("\t\tpitch_bend: %f,\n", fix2float16(context->voices[1].pitch_bend));
   printf("\t\tfrequency: %f,\n", fix2float16(context->voices[1].frequency));
-  printf("\t\tvelocity: %f,\n", fix2float16(context->voices[1].velocity));
   printf("\t\twaveform: %s,\n", synth_audiocontext_debug_waveform_to_string(context->voices[1].waveform));
   printf("\t}\n");
 

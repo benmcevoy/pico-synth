@@ -26,7 +26,7 @@ static fix16 read_from_wt(voice_t* voice, fix16* waveTable) {
   return value;
 }
 
-static fix16 square(voice_t* voice) {
+static fix16 square(voice_t* voice, fix16 pitch_bend) {
   // TODO: I wanted to have a duty cycle here for pulse width
   // but seems not good when audio is PWM
   // maybe if I use I2S instead?
@@ -35,7 +35,7 @@ static fix16 square(voice_t* voice) {
       (voice->wavetable_phase < voice->width) ? FIX16_ONE : FIX16_NEGATIVE_ONE;
 
   voice->wavetable_stride =
-      multfix16(divfix16(multfix16(voice->frequency, voice->pitch_bend + voice->detune),
+      multfix16(divfix16(multfix16(voice->frequency, pitch_bend + voice->detune),
                          FIX16_SAMPLE_RATE),
                 FIX16_TWOPI);
 
@@ -56,12 +56,12 @@ fix16 synth_waveform_noise() {
   return seed;
 }
 
-fix16 synth_waveform_sample(voice_t* voice) {
+fix16 synth_waveform_sample(voice_t* voice, fix16 pitch_bend) {
   switch (voice->waveform) {
     case SINE:
       return read_from_wt(voice, sine_wave_table);
     case SQUARE:
-      return square(voice);
+      return square(voice, pitch_bend);
     case SAW:
       return read_from_wt(voice, saw_wave_table);
     case TRIANGLE:
