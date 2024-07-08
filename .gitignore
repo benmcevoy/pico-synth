@@ -10,7 +10,9 @@ src/build/
 nohup.out
 .envrc
 
-/kicad/controller-backups/
+/kicad/controller/controller-backups/
+*.kicad_pcb.lck
+*.kicad_sch.lck
 
 !./src/build/synth/synth.uf2
 !./src/build/synth/synth.elf
