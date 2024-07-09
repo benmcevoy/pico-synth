@@ -53,12 +53,12 @@ void synth_controller_init() {
   controls[2] = (control_t){
       .channel = 2,
       .value = 0,
-      .action = ACTION_CUTOFF,
+      .action = ACTION_DELAY_DRY_WET_MIX,
   };
   controls[3] = (control_t){
       .channel = 3,
       .value = 0,
-      .action = ACTION_RESONANCE,
+      .action = ACTION_DETUNE,
   };
 }
 

@@ -36,5 +36,5 @@ fix16 synth_delay_process(delay_t* delay, fix16 in) {
   // at zero should be 100% dry
   // dry*in + wet*out
   fix16 dry = FIX16_ONE - delay->dry_wet_mix;
-  return multfix16(delay->dry_wet_mix, in) + multfix16(dry, out);
+  return multfix16(dry, in) + multfix16(delay->dry_wet_mix, out);
 }

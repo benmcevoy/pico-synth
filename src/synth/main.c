@@ -247,9 +247,9 @@ static void synth_dma_init(uint slice) {
 static void synth_audio_context_init() {
   context = malloc(sizeof(audio_context_t));
 
-  context->delay.enabled = true;
+  context->delay.enabled = false;
   context->metronome.enabled = false;
-  context->filter.enabled = true;
+  context->filter.enabled = false;
 
   context->raw = raw_buffer;
   context->pwm_out = buffer1;
@@ -257,7 +257,7 @@ static void synth_audio_context_init() {
   context->samples_elapsed = 0;
   context->gain = FIX16_POINT_7;
   context->mod_wheel = 0;
-  context->pitch_bend = 0;
+  context->pitch_bend = FIX16_ONE;
   context->velocity = FIX16_POINT_5;
 
   context->delay.delay_in_samples = 0;
