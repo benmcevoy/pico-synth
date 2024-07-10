@@ -78,6 +78,7 @@ static void pitch_bend(audio_context_t* context, uint8_t lsb, uint8_t msb) {
   fix16 bend = divfix16(divfix16(scaled, FIX16_8192) << 1, FIX16_12);
   // TODO: get rid of float
   fix16 ratio = float2fix16(powf(2.f, fix2float16(bend)));
+
   context->pitch_bend = ratio;
 
   for (int i = 0; i < VOICES_LENGTH; i++) {

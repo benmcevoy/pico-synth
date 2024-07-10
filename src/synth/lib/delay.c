@@ -19,7 +19,9 @@ void synth_delay_set_delay(delay_t* delay) {
 }
 
 fix16 synth_delay_process(delay_t* delay, fix16 in) {
-  if (!delay->enabled) return 0;
+  // not sure, turn the control down to zero and it turns off?
+  // seems ok.
+  if (!delay->enabled || delay->delay_in_samples == 0) return 0;
 
   fix16 out = buffer[read_pointer];
 
