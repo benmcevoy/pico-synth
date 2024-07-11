@@ -23,7 +23,7 @@
 // integer value we can fit in fix16 32767 is a fine sample rate anyway.
 #define SAMPLE_RATE 32767
 #define FIX16_SAMPLE_RATE 2147418112
-#define BUFFER_LENGTH 128
+#define BUFFER_LENGTH 32
 // last time I checked I can handle 32 oscillators, which is pretty good
 // could maybe do a polyphonic
 // keep removing floats and refactor the fixed point integer to q2.14
