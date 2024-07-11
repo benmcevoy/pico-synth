@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "bsp/board_api.h"
 #include "hardware/clocks.h"
 #include "hardware/dma.h"
 #include "hardware/pwm.h"
@@ -12,7 +13,6 @@
 #include "include/envelope.h"
 #include "include/filter.h"
 #include "include/fixedpoint.h"
-#include "include/ledblink.h"
 #include "include/metronome.h"
 #include "include/midi.h"
 #include "include/pitchtable.h"
@@ -323,14 +323,12 @@ void init_all() {
 
 void core1_worker() {
   while (true) {
-    
 #ifndef USE_MIDI
     // TODO: the player has a load of sleeps so the controller does not update
     // synth_controller_task(context);
     // also cannot blink led for the same reason
     synth_test_play(context);
 #else
-    synth_led_blink_task();
     // tinyusb host task
     tuh_task();
     synth_controller_task(context);
@@ -344,12 +342,13 @@ int main() {
   set_sys_clock_khz(320000, true);
   stdio_init_all();
   init_all();
+  board_led_write(1);
 
-uint systemClockHz = frequency_count_khz(CLOCKS_FC0_SRC_VALUE_CLK_SYS) / 1000;
+  uint systemClockHz = frequency_count_khz(CLOCKS_FC0_SRC_VALUE_CLK_SYS) / 1000;
 
   printf("\n----------------------\nSynth starting.\n");
   printf("system clock: %uMHz\n", systemClockHz);
-  
+
   printf("sample rate: %dHz\n", SAMPLE_RATE);
   printf("bit depth: %d\n", 16 - bit_depth);
 
