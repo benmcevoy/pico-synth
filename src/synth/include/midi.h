@@ -30,7 +30,10 @@
 #define SYNTH_MIDI_CC_ATTACK 73
 
 void synth_midi_init(audio_context_t* context);
-void synth_midi_task(audio_context_t* context, uint8_t* packet);
+// void synth_midi_task(audio_context_t* context, uint8_t* packet);
+void synth_midi_device_task(audio_context_t* context);
+void synth_midi_host_task(audio_context_t* context, uint8_t* packet);
+
 void synth_midi_panic(audio_context_t* context);
 
 static fix16 synth_midi_frequency_from_midi_note[128] = {

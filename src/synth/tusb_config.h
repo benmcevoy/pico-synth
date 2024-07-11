@@ -30,6 +30,7 @@
  extern "C" {
 #endif
 
+// enabling DEBUG glitches the audio, so watch out for that
 // #undef CFG_TUSB_DEBUG
 // #define CFG_TUSB_DEBUG  3
 
@@ -39,27 +40,54 @@
 #define BOARD_TUD_RHPORT      0
 #endif
 
+// RHPort max operational speed can defined by board.mk
+#ifndef BOARD_TUD_MAX_SPEED
+#define BOARD_TUD_MAX_SPEED   OPT_MODE_DEFAULT_SPEED
+#endif
+
+// RHPort number used for host can be defined by board.mk, default to port 1
+#ifndef BOARD_TUH_RHPORT
+#define BOARD_TUH_RHPORT      1
+#endif
+
+// RHPort max operational speed can defined by board.mk
+#ifndef BOARD_TUH_MAX_SPEED
+#define BOARD_TUH_MAX_SPEED   OPT_MODE_DEFAULT_SPEED
+#endif
+
 //--------------------------------------------------------------------
 // COMMON CONFIGURATION
 //--------------------------------------------------------------------
 
 // defined by compiler flags for flexibility
 #ifndef CFG_TUSB_MCU
-  #error CFG_TUSB_MCU must be defined
-#endif
-
-#if CFG_TUSB_MCU == OPT_MCU_LPC43XX || CFG_TUSB_MCU == OPT_MCU_LPC18XX || CFG_TUSB_MCU == OPT_MCU_MIMXRT10XX
-  #define CFG_TUSB_RHPORT0_MODE       (OPT_MODE_HOST | OPT_MODE_HIGH_SPEED)
-#else
-  #define CFG_TUSB_RHPORT0_MODE       OPT_MODE_HOST
+#error CFG_TUSB_MCU must be defined
 #endif
 
 #ifndef CFG_TUSB_OS
-#define CFG_TUSB_OS                 OPT_OS_NONE
+#define CFG_TUSB_OS           OPT_OS_NONE
 #endif
 
-// CFG_TUSB_DEBUG is defined by compiler in DEBUG build
-// #define CFG_TUSB_DEBUG           0
+#ifndef CFG_TUSB_DEBUG
+#define CFG_TUSB_DEBUG        0
+#endif
+
+// Enable Device stack, Default is max speed that hardware controller could support with on-chip PHY
+#define CFG_TUD_ENABLED       1
+#define CFG_TUD_MAX_SPEED     BOARD_TUD_MAX_SPEED
+
+// Enable Host stack, Default is max speed that hardware controller could support with on-chip PHY
+#define CFG_TUH_ENABLED       1
+#define CFG_TUH_MAX_SPEED     BOARD_TUH_MAX_SPEED
+
+#if CFG_TUSB_MCU == OPT_MCU_RP2040
+// Use pico-pio-usb as host controller for raspberry rp2040
+// TODO: this at least compiles somehow - using TUD does not
+// disable for now as the GPIO and DMA conflict
+#define CFG_TUH_RPI_PIO_USB   0
+#endif
+
+
 
 /* USB DMA on some MCUs can only access a specific SRAM region with restriction on alignment.
  * Tinyusb use follows macros to declare transferring memory so that they can be put
@@ -95,6 +123,33 @@
 
 // MIDI Host string support
 #define CFG_MIDI_HOST_DEVSTRINGS 1
+
+#ifndef CFG_TUH_MEM_SECTION
+#define CFG_TUH_MEM_SECTION
+#endif
+
+#ifndef CFG_TUH_MEM_ALIGN
+#define CFG_TUH_MEM_ALIGN           __attribute__ ((aligned(4)))
+#endif
+//--------------------------------------------------------------------
+// DEVICE CONFIGURATION
+//--------------------------------------------------------------------
+
+#ifndef CFG_TUD_ENDPOINT0_SIZE
+#define CFG_TUD_ENDPOINT0_SIZE    64
+#endif
+
+//------------- CLASS -------------//
+#define CFG_TUD_CDC               0
+#define CFG_TUD_MSC               0
+#define CFG_TUD_HID               0
+#define CFG_TUD_MIDI              1
+#define CFG_TUD_VENDOR            0
+
+// MIDI FIFO size of TX and RX
+#define CFG_TUD_MIDI_RX_BUFSIZE   (TUD_OPT_HIGH_SPEED ? 512 : 64)
+#define CFG_TUD_MIDI_TX_BUFSIZE   (TUD_OPT_HIGH_SPEED ? 512 : 64)
+
 
 #ifdef __cplusplus
  }

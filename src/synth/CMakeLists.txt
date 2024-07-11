@@ -6,6 +6,7 @@ set(TINYUSB_FAMILY_PROJECT_NAME_PREFIX "tinyusb_dev_")
 add_executable(${projectName} main.c 
     usb_midi_host_app_driver.c
     usb_midi_host.c
+    usb_descriptors.c
     lib/delay.c
     lib/controller.c
     lib/envelope.c
@@ -37,6 +38,8 @@ target_link_libraries(${projectName} PUBLIC
     hardware_spi
     tinyusb_board
     tinyusb_host
+    tinyusb_device
+    tinyusb_pico_pio_usb
     pico_multicore
     pico_unique_id
     )

@@ -20,4 +20,14 @@ pico-sdk ships an older version of tinyusb, so i have pulled latest of that modu
 
 Must be > v0.16
 
+```
+# update sdk
+cd pico-sdk
+git submodule update --init --recursive
+
+# update tiny-usb
+cd pico-sdk/lib/tinyusb
+git pull origin master
+```
+
 midi host code from:  https://github.com/rppicomidi/usb_midi_host

@@ -117,7 +117,23 @@ void synth_midi_init(audio_context_t* context) {
   synth_midi_panic(context);
 }
 
-void synth_midi_task(audio_context_t* context, uint8_t* packet) {
+void synth_midi_device_task(audio_context_t* context) {
+  uint8_t packet[4];
+  while (tud_midi_available()) {
+    // reads into the packet array
+    tud_midi_packet_read(packet);
+
+    // TODO: this is not very nice - normalise device and host structures
+    packet[0] = packet[1];
+    packet[1] = packet[2];
+    packet[2] = packet[3];
+
+    process_midi_command(context, packet);
+  }
+}
+
+
+void synth_midi_host_task(audio_context_t* context, uint8_t* packet) {
   process_midi_command(context, packet);
 }
 

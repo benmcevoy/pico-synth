@@ -27,7 +27,17 @@
 #define PWM_PIN 26
 
 // uncomment to use midi or comment out for the test code
-#define USE_MIDI
+// #define USE_MIDI
+// define to be a host, comment out to be a device
+// TODO: should work simultaneously
+// might look for a button being held down to switch mode?
+// seems it requires an additional USB port via PIO
+// I can get this to build but need to script this project a bit as I have no
+// idea how... combination of submodules at various commits that do not maktch
+// the pico-sdk any more when it does build the GPIO is using pins 2 & 3 afaik
+// that conflicts with uart and also PANICS over the dma channel but it builds
+// :) https://github.com/hathach/tinyusb/issues/1669
+#define USE_MIDI_HOST
 
 static uint16_t buffer0[BUFFER_LENGTH] = {0};
 static uint16_t buffer1[BUFFER_LENGTH] = {0};
@@ -248,7 +258,7 @@ static void synth_audio_context_init() {
   context = malloc(sizeof(audio_context_t));
 
   context->delay.enabled = true;
-  context->metronome.enabled = false;
+  context->metronome.enabled = true;
   context->filter.enabled = false;
 
   context->raw = raw_buffer;
@@ -311,10 +321,14 @@ void init_all() {
   synth_controller_init();
 
 #ifdef USE_MIDI
-  synth_midi_init(context);
+  // midi is intialised when mounted
 
-  // init usb host
-  tuh_init(BOARD_TUD_RHPORT);
+// TODO: try and get rid of this
+#ifdef USE_MIDI_HOST
+  tuh_init(BOARD_TUH_RHPORT);
+#else
+  tud_init(BOARD_TUD_RHPORT);
+#endif
 
   // read to initialise to the state of the physical controls
   synth_controller_task(context);
@@ -324,14 +338,18 @@ void init_all() {
 void core1_worker() {
   while (true) {
 #ifndef USE_MIDI
-    // TODO: the player has a load of sleeps so the controller does not update
-    // synth_controller_task(context);
-    // also cannot blink led for the same reason
+    // TODO: the player has a load of sleeps
+    // it's not really a sequencer
     synth_test_play(context);
 #else
+// TODO: try and get rid of this
+#ifdef USE_MIDI_HOST
     // tinyusb host task
     tuh_task();
-    synth_controller_task(context);
+#else
+    tud_task();
+    synth_midi_device_task(context);
+#endif
 #endif
   }
 }
@@ -354,11 +372,11 @@ int main() {
 
   synth_audiocontext_debug(context);
 
-  // multicore_launch_core1(core1_worker);
-  core1_worker();
+  // ah this works now for some reason...
+  multicore_launch_core1(core1_worker);
 
   while (1) {
-    tight_loop_contents();
+    synth_controller_task(context);
   }
 }
 
@@ -381,6 +399,10 @@ void tuh_midi_mount_cb(uint8_t dev_addr, uint8_t in_ep, uint8_t out_ep,
   if (midi_dev_addr == 0) {
     // then no MIDI device is currently connected
     midi_dev_addr = dev_addr;
+
+    // init midi here as we get can get some random messages in the queue if you
+    // were hitting keys on a midi controller while the pico boots
+    synth_midi_init(context);
   } else {
     printf(
         "A different USB MIDI Device is already connected.\r\nOnly one device "
@@ -409,7 +431,7 @@ void tuh_midi_rx_cb(uint8_t dev_addr, uint32_t num_packets) {
         uint32_t bytes_read =
             tuh_midi_stream_read(dev_addr, &cable_num, buffer, sizeof(buffer));
         if (bytes_read == 0) return;
-        synth_midi_task(context, buffer);
+        synth_midi_host_task(context, buffer);
       }
     }
   }
