@@ -27,7 +27,8 @@
 #define PWM_PIN 26
 
 // uncomment to use midi or comment out for the test code
-// #define USE_MIDI
+#define USE_MIDI
+
 // define to be a host, comment out to be a device
 // TODO: should work simultaneously
 // might look for a button being held down to switch mode?
@@ -258,7 +259,7 @@ static void synth_audio_context_init() {
   context = malloc(sizeof(audio_context_t));
 
   context->delay.enabled = true;
-  context->metronome.enabled = true;
+  context->metronome.enabled = false;
   context->filter.enabled = false;
 
   context->raw = raw_buffer;
@@ -302,10 +303,10 @@ static void synth_audio_context_init() {
 
   for (int v = 0; v < VOICES_LENGTH; v++) {
     context->voices[v].frequency = PITCH_C3;
-    context->voices[v].waveform = SAW;
+    context->voices[v].waveform = v+1;
     context->voices[v].detune = 0;
     context->voices[v].wavetable_phase = 0;
-    context->voices[v].width = 0;
+    context->voices[v].width = FIX16_POINT_5;
     synth_waveform_set_wavetable_stride(&context->voices[v], 0);
   }
 }
@@ -355,12 +356,16 @@ void core1_worker() {
 }
 
 int main() {
+  // https://www.raspberrypi.com/documentation/pico-sdk/runtime.html#pico_bootsel_via_double_reset
+  // pico_bootsel_via_double_reset is linked in CMakeLists.txt
+  
   // can go to 420MHz set vreg to 1.3
   vreg_set_voltage(VREG_VOLTAGE_1_15);
   set_sys_clock_khz(320000, true);
+
   stdio_init_all();
   init_all();
-  board_led_write(1);
+  //board_led_write(1);
 
   uint systemClockHz = frequency_count_khz(CLOCKS_FC0_SRC_VALUE_CLK_SYS) / 1000;
 

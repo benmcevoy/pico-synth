@@ -40,6 +40,7 @@ target_link_libraries(${projectName} PUBLIC
     tinyusb_host
     tinyusb_device
     tinyusb_pico_pio_usb
+    pico_bootsel_via_double_reset
     pico_multicore
     pico_unique_id
     )

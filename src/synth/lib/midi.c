@@ -5,8 +5,8 @@
 
 #include "../usb_midi_host.h"
 #include "include/envelope.h"
-#include "include/waveform.h"
 #include "include/fixedpoint.h"
+#include "include/waveform.h"
 #include "tusb.h"
 
 static uint8_t note_priority[16] = {0};
@@ -23,11 +23,9 @@ static void note_on(audio_context_t* context, uint8_t note, uint8_t velocity) {
 
   context->velocity = v;
 
-
   for (int i = 0; i < VOICES_LENGTH; i++) {
     voice_t* voice = &context->voices[i];
 
-    
     voice->frequency = pitch;
     synth_waveform_set_wavetable_stride(voice, context->pitch_bend);
   }
@@ -83,7 +81,7 @@ static void pitch_bend(audio_context_t* context, uint8_t lsb, uint8_t msb) {
 
   for (int i = 0; i < VOICES_LENGTH; i++) {
     voice_t* voice = &context->voices[i];
-    
+
     synth_waveform_set_wavetable_stride(voice, context->pitch_bend);
   }
 }
@@ -113,9 +111,7 @@ static void process_midi_command(audio_context_t* context, uint8_t packet[4]) {
   }
 }
 
-void synth_midi_init(audio_context_t* context) {
-  synth_midi_panic(context);
-}
+void synth_midi_init(audio_context_t* context) { synth_midi_panic(context); }
 
 void synth_midi_device_task(audio_context_t* context) {
   uint8_t packet[4];
@@ -131,7 +127,6 @@ void synth_midi_device_task(audio_context_t* context) {
     process_midi_command(context, packet);
   }
 }
-
 
 void synth_midi_host_task(audio_context_t* context, uint8_t* packet) {
   process_midi_command(context, packet);
