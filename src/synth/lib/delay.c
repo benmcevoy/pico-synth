@@ -3,8 +3,9 @@
 #include <stdint.h>
 
 static fix16 buffer[DELAY_BUFFER_SIZE] = {};
-static int read_pointer;
-static int write_pointer;
+static uint32_t read_pointer_initial;
+static uint32_t read_pointer;
+static uint32_t write_pointer;
 static fix16 feedback;
 
 void synth_delay_init() {
@@ -13,8 +14,9 @@ void synth_delay_init() {
 }
 
 void synth_delay_set_delay(delay_t* delay) {
-  read_pointer = (write_pointer - delay->delay_in_samples + DELAY_BUFFER_SIZE) %
+  read_pointer_initial = read_pointer = (write_pointer - delay->delay_in_samples + DELAY_BUFFER_SIZE) %
                  DELAY_BUFFER_SIZE;
+
   feedback = delay->feedback;
 }
 
@@ -33,10 +35,10 @@ fix16 synth_delay_process(delay_t* delay, fix16 in) {
   if (write_pointer >= DELAY_BUFFER_SIZE) write_pointer = 0;
 
   read_pointer++;
-  if (read_pointer >= DELAY_BUFFER_SIZE) read_pointer = 0;
+  if (read_pointer >= DELAY_BUFFER_SIZE) read_pointer = read_pointer_initial;
 
   // at zero should be 100% dry
   // dry*in + wet*out
   fix16 dry = FIX16_ONE - delay->dry_wet_mix;
-  return multfix16(dry, in) + multfix16(delay->dry_wet_mix, out);
+  return multfix16(dry, in) + multfix16(delay->dry_wet_mix, out) ;
 }

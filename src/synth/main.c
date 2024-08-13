@@ -272,9 +272,6 @@ static void synth_audio_context_init() {
   context->velocity = FIX16_POINT_5;
 
   context->delay.delay_in_samples = 0;
-  context->delay.feedback = 0;
-  context->delay.dry_wet_mix = FIX16_POINT_5;
-
   context->filter.follow_voice_envelope = true;
   context->filter.resonance = 0;
   context->filter.cutoff = 0;
@@ -303,7 +300,7 @@ static void synth_audio_context_init() {
 
   for (int v = 0; v < VOICES_LENGTH; v++) {
     context->voices[v].frequency = PITCH_C3;
-    context->voices[v].waveform = v+1;
+    context->voices[v].waveform = v + 1;
     context->voices[v].detune = 0;
     context->voices[v].wavetable_phase = 0;
     context->voices[v].width = FIX16_POINT_5;
@@ -313,6 +310,7 @@ static void synth_audio_context_init() {
 
 void init_all() {
   board_init();
+  synth_waveform_init();
   synth_audio_context_init();
   synth_metronome_init(&context->metronome, 120);
   synth_filter_init(context);
@@ -358,14 +356,13 @@ void core1_worker() {
 int main() {
   // https://www.raspberrypi.com/documentation/pico-sdk/runtime.html#pico_bootsel_via_double_reset
   // pico_bootsel_via_double_reset is linked in CMakeLists.txt
-  
+
   // can go to 420MHz set vreg to 1.3
   vreg_set_voltage(VREG_VOLTAGE_1_15);
   set_sys_clock_khz(320000, true);
 
   stdio_init_all();
   init_all();
-  //board_led_write(1);
 
   uint systemClockHz = frequency_count_khz(CLOCKS_FC0_SRC_VALUE_CLK_SYS) / 1000;
 
@@ -377,11 +374,23 @@ int main() {
 
   synth_audiocontext_debug(context);
 
-  // ah this works now for some reason...
+  // run USB tasks
   multicore_launch_core1(core1_worker);
 
+  // run input tasks
   while (1) {
-    synth_controller_task(context);
+    // SPI clock for the controller is set to 3.6Mhz
+    // which runs at about 35 uSecond
+    // so in theory this could be run on a timer at half sample rate or 16kHz
+    // TODO: see how stable it at this clock - previously was running at 120Khz 
+    // so 3.6MHz is a bit of a jump
+    // also - has to query 64 controls if I expose all features
+    // so I need some headroom
+
+    //uint32_t start = time_us_32();
+    synth_controller_task(context);    
+    //uint32_t end = time_us_32();
+    //printf("%uus\n", end-start);
   }
 }
 

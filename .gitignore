@@ -11,6 +11,8 @@ nohup.out
 .envrc
 
 /kicad/controller/controller-backups/
+/kicad/synth/synth-backups/
+/kicad/amp/amp-backups/
 *.kicad_pcb.lck
 *.kicad_sch.lck
 

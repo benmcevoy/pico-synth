@@ -1,4 +1,5 @@
 #include "../include/mcp3008.h"
+#include <stdio.h>
 
 mcp3008_t synth_mcp3008_init(spi_inst_t* spi, size_t baud_rate, uint8_t chip_select_pin,
                        uint8_t clock_pin, uint8_t tx_pin, uint8_t rx_pin) {

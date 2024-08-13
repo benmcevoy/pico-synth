@@ -8,6 +8,11 @@ static int a = 1;
 static int b = 5;
 static int c = 2;
 
+void synth_waveform_init(){
+  // TODO: generate the tables instead
+  // can get more control, experiment if tables are generated
+}
+
 static fix16 read_from_wt(voice_t* voice, fix16* waveTable) {
   int16_t indexBelow = fix2int16(voice->wavetable_read_pointer);
   int16_t indexAbove = indexBelow + 1;

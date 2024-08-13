@@ -12,6 +12,7 @@ add_executable(${projectName} main.c
     lib/envelope.c
     lib/filter.c
     lib/mcp3008.c
+    lib/mcp23s08.c
     lib/midi.c
     lib/waveform.c)
 

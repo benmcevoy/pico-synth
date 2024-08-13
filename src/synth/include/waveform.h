@@ -6,6 +6,8 @@
 #define WAVE_TABLE_LENGTH 512
 #define FIX16_WAVE_TABLE_LENGTH 33554432
 
+void synth_waveform_init();
+
 // TODO: probably should be set_frequency on voice?
 static inline void synth_waveform_set_wavetable_stride(voice_t* voice, fix16 pitch_bend) {
   voice->wavetable_stride =
