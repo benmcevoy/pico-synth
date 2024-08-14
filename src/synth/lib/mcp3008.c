@@ -1,7 +1,7 @@
 #include "../include/mcp3008.h"
 #include <stdio.h>
 
-mcp3008_t synth_mcp3008_init(spi_inst_t* spi, size_t baud_rate, uint8_t chip_select_pin,
+spi_device_t synth_mcp3008_init(spi_inst_t* spi, size_t baud_rate, uint8_t chip_select_pin,
                        uint8_t clock_pin, uint8_t tx_pin, uint8_t rx_pin) {
   gpio_init(chip_select_pin);
   gpio_set_dir(chip_select_pin, GPIO_OUT);
@@ -21,7 +21,7 @@ mcp3008_t synth_mcp3008_init(spi_inst_t* spi, size_t baud_rate, uint8_t chip_sel
   gpio_set_function(tx_pin, GPIO_FUNC_SPI);
   gpio_set_function(rx_pin, GPIO_FUNC_SPI);
 
-  return (mcp3008_t){.spi = spi,
+  return (spi_device_t){.spi = spi,
                      .actual_baud_rate = actual_baud_rate,
                      .tx_pin = tx_pin,
                      .clock_pin = clock_pin,
@@ -29,7 +29,7 @@ mcp3008_t synth_mcp3008_init(spi_inst_t* spi, size_t baud_rate, uint8_t chip_sel
                      .chip_select_pin = chip_select_pin};
 };
 
-uint16_t synth_mcp3008_read(mcp3008_t* instance, uint8_t channel) {
+uint16_t synth_mcp3008_read(spi_device_t* instance, uint8_t channel) {
   static uint8_t buf_in[3] = {0, 0, 0};
   static uint8_t buf_out[3] = {0, 0, 0};
 

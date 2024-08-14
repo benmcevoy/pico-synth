@@ -6,17 +6,9 @@
 #include "pico/stdlib.h"
 #include "hardware/spi.h"
 
-typedef struct Mcp23s08 {
-    spi_inst_t* spi;
-    uint8_t chip_select_pin;
-    uint8_t clock_pin;
-    uint8_t tx_pin;
-    uint8_t rx_pin;
-    uint actual_baud_rate;
+#include "controller.h"
 
-} mcp23s08_t;
-
-/// @brief initialise a mcp23008
+/// @brief initialise a mcp23s08
 /// @param spi 
 /// @param baudRate 
 /// @param chip_select_pin 
@@ -24,15 +16,15 @@ typedef struct Mcp23s08 {
 /// @param tx_pin 
 /// @param rx_pin 
 /// @return 
-mcp23s08_t synth_mcp23s08_init(spi_inst_t* spi, size_t baudRate, uint8_t chip_select_pin,
-                       uint8_t clock_pin, uint8_t tx_pin, uint8_t rx_pin);
+spi_device_t synth_mcp23s08_init(spi_inst_t* spi, size_t baud_rate, uint8_t chip_select_pin,
+                       uint8_t clock_pin, uint8_t tx_pin, uint8_t rx_pin, uint8_t io_mask);
 
-/// @brief read mcp23008 channel
+/// @brief read mcp23s08 channel
 /// @param instance 
 /// @param channel 
-/// @return a value between 0 and 255
-uint8_t synth_mcp23s08_read(mcp23s08_t* instance, uint8_t channel);
+/// @return 0 or 1
+uint8_t synth_mcp23s08_read(spi_device_t* instance, uint8_t channel);
 
-void synth_mcp23s08_write(mcp23s08_t* instance, uint8_t gpio_mask);
+void synth_mcp23s08_write(spi_device_t* instance, uint8_t gpio_mask);
 
 #endif
