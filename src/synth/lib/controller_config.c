@@ -40,7 +40,7 @@ void synth_controller_config_init() {
   // or just read a file then init
   controls[0] = (control_t){.channel = 0,
                             .value = 0,
-                            .action = CONTROL_ACTION_DELAY,
+                            .action = CONTROL_ACTION_DELAY_TIME,
                             .control_type = CONTROL_TYPE_ANALOG,
                             .spi_device = &analog_controller0};
   controls[1] = (control_t){.channel = 1,

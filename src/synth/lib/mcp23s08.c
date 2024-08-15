@@ -62,6 +62,8 @@ spi_device_t synth_mcp23s08_init(spi_inst_t* spi, size_t baud_rate,
   write(&instance, IODIR, io_mask);
   // set pull up and use active low
   write(&instance, GPPU, io_mask);
+  // invert
+  write(&instance, IPOL, io_mask);
 
   return instance;
 };
@@ -88,7 +90,12 @@ uint8_t synth_mcp23s08_read(spi_device_t* instance, uint8_t channel) {
   return (buf_in[2] & mask) == mask;
 }
 
-void synth_mcp23s08_write(spi_device_t* instance, uint8_t gpio_mask) {
+void synth_mcp23s08_write(spi_device_t* instance, uint8_t channel, bool value) {
   // write gpio
-  write(instance, GPIO, 1);
+  // TODO: this is no good - will set the channel but wipe everything else
+  uint8_t mask = channel_mask[channel - 1];
+
+  mask = mask & (value > 0) ? 0xff : 0x00;
+
+  write(instance, GPIO, mask);
 }

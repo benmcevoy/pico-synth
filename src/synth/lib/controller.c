@@ -14,6 +14,9 @@
 #define NEAR_ZERO (THRESHOLD * 2)
 #define NEAR_ONE (MAX_VALUE - 2 * THRESHOLD)
 
+#define MAX_RESONANCE 2200.f
+static fix16 feedback;
+
 static inline uint16_t snap(uint16_t value) {
   if (value < NEAR_ZERO) return 0;
   if (value > NEAR_ONE) return MAX_VALUE;
@@ -27,48 +30,47 @@ static inline fix16 normal(uint16_t value) { return value << 6; }
 
 void synth_controller_init() { synth_controller_config_init(); }
 
-// static void write(audio_context_t* context) {
-//   synth_mcp23s08_write(&controller1, 1);
-// }
-
-static void read(audio_context_t* context) {
+void synth_controller_task(audio_context_t* context) {
   // read channels
   for (size_t i = 0; i < CONTROLS_COUNT; i++) {
     // TODO: this method is too long
-    // synth_mcp3008_read should be
-    // controls[i].controller->read(controls[i].controller) the snap funciton is
-    // part of the analog implementation - mcp3008 so i think i need something
-    // to abstract two implementations
 
     control_t* control = &controls[i];
     uint16_t value;
     bool value_has_changed = false;
 
-    if (control->control_type == CONTROL_TYPE_ANALOG) {
-      value = snap(synth_mcp3008_read(control->spi_device, control->channel));
+    switch (control->control_type) {
+      case CONTROL_TYPE_ANALOG: {
+        value = snap(synth_mcp3008_read(control->spi_device, control->channel));
 
-      if (abs(control->value - value) > THRESHOLD) {
+        if (abs(control->value - value) > THRESHOLD) {
+          control->value = value;
+          value_has_changed = true;
+        }
+      } break;
+      case CONTROL_TYPE_MOMENTRY: {
+        value = synth_mcp23s08_read(control->spi_device, control->channel);
+
+        if (control->value != value) {
+          value_has_changed = true;
+        }
+
         control->value = value;
-        value_has_changed = true;
-      }
-    }
+        // TODO: should be configurable but this is OK for now
+        // "side-set" - assume the channel below is the indicator light
+        synth_mcp23s08_write(control->spi_device, control->channel - 1,
+                             control->value);
+      } break;
+      case CONTROL_TYPE_TOGGLE: {
+        value = synth_mcp23s08_read(control->spi_device, control->channel);
 
-    if (control->control_type == CONTROL_TYPE_MOMENTRY) {
-      value = synth_mcp23s08_read(control->spi_device, control->channel);
+        if (value == 1) {
+          control->value = control->value == 1 ? 0 : 1;
+          value_has_changed = true;
+        }
 
-      if (control->value != value) {
-        value_has_changed = true;
-      }
-
-      control->value = value;
-    }
-
-    if (control->control_type == CONTROL_TYPE_TOGGLE) {
-      value = synth_mcp23s08_read(control->spi_device, control->channel);
-
-      if (control->value == 1) {
-        control->value = control->value == 1 ? 0 : 1;
-        value_has_changed = true;
+        synth_mcp23s08_write(control->spi_device, control->channel - 1,
+                             control->value);
       }
     }
 
@@ -97,7 +99,11 @@ static void read(audio_context_t* context) {
         context->voices[1].width = width;
       } break;
 
-      case CONTROL_ACTION_DELAY:
+      case CONTROL_ACTION_DELAY_ENABLED:
+        context->delay.enabled = control->value;
+        break;
+
+      case CONTROL_ACTION_DELAY_TIME:
         // delay is proportional to sample rate
         context->delay.delay_in_samples =
             fix2int16(multfix16(DELAY_BUFFER_SIZE_FIX16, normal(value)));
@@ -105,28 +111,33 @@ static void read(audio_context_t* context) {
 
       case CONTROL_ACTION_DELAY_FEEDBACK:
         // feedback can get close 1.0 which makes for whacky sounds
-        context->delay.feedback = normal(value);
+        feedback = normal(value);
+        context->delay.feedback = feedback;
         break;
 
       case CONTROL_ACTION_DELAY_FEEDBACK_INFINITE:
         // TODO: ramp(envelope?) from feedback to 1 while button is held down
         // then ramp back to feedback on release
-        if(control->value)printf(".");
+        context->delay.feedback =
+            (control->value == 1) ? FIX16_ONE : feedback;
         break;
 
       case CONTROL_ACTION_DELAY_DRY_WET_MIX:
         context->delay.dry_wet_mix = normal(value);
         break;
 
-      case CONTROL_ACTION_CUTOFF:
+      case CONTROL_ACTION_FILTER_ENABLED:
+        context->filter.enabled = control->value;
+        break;
+
+      case CONTROL_ACTION_FILTER_CUTOFF:
         // max is quarter sample rate, about 8kHz
         context->filter.cutoff =
             multfix16(FIX16_SAMPLE_RATE >> 3, normal(value));
         break;
 
-      case CONTROL_ACTION_RESONANCE:
-        // TODO: is 2200 the MAX_RESONANCE?
-        context->filter.resonance = float2fix16(value / 2200.f);
+      case CONTROL_ACTION_FILTER_RESONANCE:
+        context->filter.resonance = float2fix16(value / MAX_RESONANCE);
         break;
 
       case CONTROL_ACTION_ATTACK:
@@ -151,10 +162,3 @@ static void read(audio_context_t* context) {
   }
 }
 
-void synth_controller_task(audio_context_t* context) {
-  // TODO: there isn't really a read/write
-  // taking a cue from the PIO I can read pin of the GPIO extender and write the
-  // state to pin+1 (side set)
-  read(context);
-  // write(context);
-}

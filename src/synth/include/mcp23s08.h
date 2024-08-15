@@ -25,6 +25,6 @@ spi_device_t synth_mcp23s08_init(spi_inst_t* spi, size_t baud_rate, uint8_t chip
 /// @return 0 or 1
 uint8_t synth_mcp23s08_read(spi_device_t* instance, uint8_t channel);
 
-void synth_mcp23s08_write(spi_device_t* instance, uint8_t gpio_mask);
+void synth_mcp23s08_write(spi_device_t* instance, uint8_t channel, bool value);
 
 #endif
