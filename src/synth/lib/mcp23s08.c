@@ -72,7 +72,7 @@ uint8_t synth_mcp23s08_read(spi_device_t* instance, uint8_t channel) {
   static uint8_t buf_in[3] = {0, 0, 0};
   static uint8_t buf_out[3] = {ADDRESS_READ, GPIO, 0};
 
-  uint8_t mask = channel_mask[channel - 1];
+  uint8_t mask = channel_mask[channel];
 
   buf_out[2] = mask;
 
@@ -93,9 +93,9 @@ uint8_t synth_mcp23s08_read(spi_device_t* instance, uint8_t channel) {
 void synth_mcp23s08_write(spi_device_t* instance, uint8_t channel, bool value) {
   // write gpio
   // TODO: this is no good - will set the channel but wipe everything else
-  uint8_t mask = channel_mask[channel - 1];
+  uint8_t mask = channel_mask[channel];
 
-  mask = mask & (value > 0) ? 0xff : 0x00;
+  mask = mask & (value ? 0xff : 0x00);
 
   write(instance, GPIO, mask);
 }

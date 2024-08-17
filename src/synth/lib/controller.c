@@ -57,8 +57,8 @@ void synth_controller_task(audio_context_t* context) {
 
         control->value = value;
         // TODO: should be configurable but this is OK for now
-        // "side-set" - assume the channel below is the indicator light
-        synth_mcp23s08_write(control->spi_device, control->channel - 1,
+        // "side-set" - assume the channel + 1 is the indicator light
+        synth_mcp23s08_write(control->spi_device, control->channel + 1,
                              control->value);
       } break;
       case CONTROL_TYPE_TOGGLE: {
@@ -69,7 +69,8 @@ void synth_controller_task(audio_context_t* context) {
           value_has_changed = true;
         }
 
-        synth_mcp23s08_write(control->spi_device, control->channel - 1,
+        // "side-set" channel + 1
+        synth_mcp23s08_write(control->spi_device, control->channel + 1,
                              control->value);
       }
     }
@@ -118,8 +119,7 @@ void synth_controller_task(audio_context_t* context) {
       case CONTROL_ACTION_DELAY_FEEDBACK_INFINITE:
         // TODO: ramp(envelope?) from feedback to 1 while button is held down
         // then ramp back to feedback on release
-        context->delay.feedback =
-            (control->value == 1) ? FIX16_ONE : feedback;
+        context->delay.feedback = (control->value == 1) ? FIX16_ONE : feedback;
         break;
 
       case CONTROL_ACTION_DELAY_DRY_WET_MIX:
@@ -161,4 +161,3 @@ void synth_controller_task(audio_context_t* context) {
     }
   }
 }
-

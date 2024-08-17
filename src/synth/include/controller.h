@@ -9,6 +9,9 @@
 typedef enum {
   CONTROL_ACTION_NONE = 0,
 
+  // TODO: note on/off do not trigger enevelope, just stay on
+  CONTROL_ACTION_DRONE_ENABLED,
+
   CONTROL_ACTION_DELAY_TIME,
   CONTROL_ACTION_DELAY_ENABLED,
   CONTROL_ACTION_DELAY_FEEDBACK,

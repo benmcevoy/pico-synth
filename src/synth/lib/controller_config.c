@@ -11,6 +11,8 @@
 #define SPI_CS0 5
 #define SPI_CS1 6
 #define BAUD_RATE 3600000
+// 1 is input 0 is output
+#define IO_MASK 0b01010101
 
 /// @brief controller0 is mcp3008 analog
 static spi_device_t analog_controller0;
@@ -24,7 +26,7 @@ control_t* controls;
 void synth_controller_config_init() {
   // use CS1
   gpio_controller0 =
-      synth_mcp23s08_init(spi0, BAUD_RATE, SPI_CS1, SPI_CLOCK, SPI_TX, SPI_RX, 0b10101010);
+      synth_mcp23s08_init(spi0, BAUD_RATE, SPI_CS1, SPI_CLOCK, SPI_TX, SPI_RX, IO_MASK);
 
   // use CS0
   analog_controller0 =
@@ -58,7 +60,7 @@ void synth_controller_config_init() {
                             .action = CONTROL_ACTION_DETUNE,
                             .control_type = CONTROL_TYPE_ANALOG,
                             .spi_device = &analog_controller0};
-  controls[4] = (control_t){.channel = 2,
+  controls[4] = (control_t){.channel = 0,
                             .value = 0,
                             .action = CONTROL_ACTION_DELAY_FEEDBACK_INFINITE,
                             .control_type = CONTROL_TYPE_MOMENTRY,
