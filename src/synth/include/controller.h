@@ -57,6 +57,7 @@ typedef struct {
   control_action_t action;
   control_type_t control_type;
   spi_device_t* spi_device;
+  uint16_t prev_value;
 } control_t;
 
 extern control_t* controls;

@@ -1,4 +1,4 @@
-22677759459575553
+22694760686604815
 Audio_Module
 Reverb_BTDR-1H
 Digital Reverberation Unit, http://www.belton.co.kr/inc/downfile.php?seq=17&file=pdf (footprint from http://www.uk-electronic.de/PDF/BTDR-1.pdf)
@@ -52185,12 +52185,61 @@ SMD SMT ceramic resonator filter filter hand-soldering
 3
 3
 Custom
+FKP2_04.5WX06.0HX07.2L_WIM
+
+FKP2O100471D00KSSD 
+0
+2
+2
+Custom
+N08E_TEX
+
+LM386N-1/NOPB 
+0
+8
+8
+Custom
 PinHeader_1x03_P2.54mm_Vertical_Nav
 Through hole straight pin header, 1x03, 2.54mm pitch, single row
 Through hole pin header THT 1x03 2.54mm single row
 0
 3
 3
+Custom
+SOIC18-W_MC_MCH
+
+MCP23S08T-E/SO 
+0
+18
+18
+Custom
+SOIC18-W_MC_MCH-L
+
+MCP23S08T-E/SO 
+0
+18
+18
+Custom
+SOIC18-W_MC_MCH-M
+
+MCP23S08T-E/SO 
+0
+18
+18
+Custom
+SW_1825910-6-4
+
+
+0
+4
+4
+Custom
+SW_PTS125SM43-2 LFS_CNK
+
+PTS125SM43-2 LFS 
+0
+4
+4
 Diode_SMD
 D_0201_0603Metric
 Diode SMD 0201 (0603 Metric), square (rectangular) end terminal, IPC_7351 nominal, (Body size source: https://www.vishay.com/docs/20052/crcw0201e3.pdf), generated with kicad-footprint-generator
@@ -61956,6 +62005,27 @@ Yellow 5381 Series LED
 0
 2
 2
+MCU_RaspberryPi_and_Boards
+Crystal_SMD_HC49-US
+SMD Crystal HC-49-SD http://cdn-reichelt.de/documents/datenblatt/B400/xxx-HC49-SMD.pdf, 11.4x4.7mm^2 package
+SMD SMT crystal
+0
+2
+2
+MCU_RaspberryPi_and_Boards
+RP2040-QFN-56
+QFN, 56 Pin (http://www.cypress.com/file/416486/download#page=40), generated with kicad-footprint-generator ipc_dfn_qfn_generator.py
+QFN DFN_QFN
+0
+70
+57
+MCU_RaspberryPi_and_Boards
+RPi_Pico_SMD_TH
+Through hole straight pin header, 2x20, 2.54mm pitch, double rows
+Through hole pin header THT 2x20 2.54mm double row
+0
+86
+43
 Module
 A20_OLINUXINO_LIME2
 A20 Olinuxino LIME2, 1.2GHz, 512-1024MB RAM, Micro-SD, NAND or eMMC, 1000Mbit Ethernet

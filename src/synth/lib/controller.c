@@ -41,12 +41,13 @@ void synth_controller_task(audio_context_t* context) {
 
     switch (control->control_type) {
       case CONTROL_TYPE_ANALOG: {
-        value = snap(synth_mcp3008_read(control->spi_device, control->channel));
+        snap(synth_mcp3008_read(control->spi_device, control->channel));
 
         if (abs(control->value - value) > THRESHOLD) {
           control->value = value;
           value_has_changed = true;
         }
+
       } break;
       case CONTROL_TYPE_MOMENTRY: {
         value = synth_mcp23s08_read(control->spi_device, control->channel);
@@ -57,21 +58,24 @@ void synth_controller_task(audio_context_t* context) {
 
         control->value = value;
         // TODO: should be configurable but this is OK for now
-        // "side-set" - assume the channel + 1 is the indicator light
-        synth_mcp23s08_write(control->spi_device, control->channel + 1,
+        // "side-set" - assume the channel - 1 is the indicator light
+        synth_mcp23s08_write(control->spi_device, control->channel - 1,
                              control->value);
       } break;
       case CONTROL_TYPE_TOGGLE: {
         value = synth_mcp23s08_read(control->spi_device, control->channel);
 
-        if (value == 1) {
+        // rising edge
+        if (value != control->prev_value && value == 1) {
+          // flip
           control->value = control->value == 1 ? 0 : 1;
           value_has_changed = true;
+          // "side-set" channel - 1
+          synth_mcp23s08_write(control->spi_device, control->channel - 1,
+                               control->value);
         }
 
-        // "side-set" channel + 1
-        synth_mcp23s08_write(control->spi_device, control->channel + 1,
-                             control->value);
+        control->prev_value = value;
       }
     }
 

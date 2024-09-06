@@ -64,6 +64,8 @@ spi_device_t synth_mcp23s08_init(spi_inst_t* spi, size_t baud_rate,
   write(&instance, GPPU, io_mask);
   // invert
   write(&instance, IPOL, io_mask);
+  // set all low
+  write(&instance, GPIO, 0);
 
   return instance;
 };
@@ -83,19 +85,27 @@ uint8_t synth_mcp23s08_read(spi_device_t* instance, uint8_t channel) {
   gpio_put(instance->chip_select_pin, 1);
 
   // TODO:
-  // this is not super efficeint - as it reads a byte witht he state of all input pins
-  // so i end up doing more reads then I need
-  // but OK for now
-  // return 0 or 1
+  // this is not super efficient - as it reads a byte with the state of all
+  // input pins so i end up doing more reads then I need but OK for now return 0
+  // or 1
   return (buf_in[2] & mask) == mask;
 }
 
-void synth_mcp23s08_write(spi_device_t* instance, uint8_t channel, bool value) {
-  // write gpio
-  // TODO: this is no good - will set the channel but wipe everything else
+void synth_mcp23s08_write(spi_device_t* instance, uint8_t channel,
+                          uint8_t value) {
+  // read current from latch register
+  static uint8_t buf_in[3] = {0, 0, 0};
+  static uint8_t buf_out[3] = {ADDRESS_READ, OLAT, 0};
+
+  gpio_put(instance->chip_select_pin, 0);
+  spi_write_read_blocking(instance->spi, buf_out, buf_in, 3);
+  gpio_put(instance->chip_select_pin, 1);
+  uint8_t current = buf_in[2];
+
+  // set channel bit
   uint8_t mask = channel_mask[channel];
+  value = (value == 1 ? mask : 0);
 
-  mask = mask & (value ? 0xff : 0x00);
-
-  write(instance, GPIO, mask);
+  // ~ is complement/inverse
+  write(instance, GPIO, (current & ~mask) | (value & mask));
 }

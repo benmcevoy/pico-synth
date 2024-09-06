@@ -258,7 +258,7 @@ static void synth_dma_init(uint slice) {
 static void synth_audio_context_init() {
   context = malloc(sizeof(audio_context_t));
 
-  context->delay.enabled = true;
+  context->delay.enabled = false;
   context->metronome.enabled = false;
   context->filter.enabled = false;
 
@@ -300,7 +300,7 @@ static void synth_audio_context_init() {
 
   for (int v = 0; v < VOICES_LENGTH; v++) {
     context->voices[v].frequency = PITCH_C3;
-    context->voices[v].waveform = v + 1;
+    context->voices[v].waveform = SQUARE;
     context->voices[v].detune = 0;
     context->voices[v].wavetable_phase = 0;
     context->voices[v].width = FIX16_POINT_5;
