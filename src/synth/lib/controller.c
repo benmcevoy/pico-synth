@@ -41,13 +41,12 @@ void synth_controller_task(audio_context_t* context) {
 
     switch (control->control_type) {
       case CONTROL_TYPE_ANALOG: {
-        snap(synth_mcp3008_read(control->spi_device, control->channel));
+        value = snap(synth_mcp3008_read(control->spi_device, control->channel));
 
         if (abs(control->value - value) > THRESHOLD) {
           control->value = value;
           value_has_changed = true;
         }
-
       } break;
       case CONTROL_TYPE_MOMENTRY: {
         value = synth_mcp23s08_read(control->spi_device, control->channel);
