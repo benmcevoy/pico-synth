@@ -20,7 +20,7 @@ static spi_device_t analog_controller0;
 /// @brief controller1 is mcp23s08 gpio
 static spi_device_t gpio_controller0;
 
-#define CONTROLS_COUNT 5
+#define CONTROLS_COUNT 8
 control_t* controls;
 
 void synth_controller_config_init() {
@@ -41,12 +41,68 @@ void synth_controller_config_init() {
   // the wavetables
   // or just read a file then init
 
-  controls[0] = (control_t){.channel = 0,
+
+
+  controls[0] = (control_t){.channel = 4,
                             .value = 0,
                             .prev_value = 0,
-                            .action = CONTROL_ACTION_DETUNE,
+                            .action = CONTROL_ACTION_DELAY_DRY_WET_MIX,
                             .control_type = CONTROL_TYPE_ANALOG,
                             .spi_device = &analog_controller0};
+  controls[1] = (control_t){.channel = 2,
+                            .value = 0,
+                            .prev_value = 0,
+                            .action = CONTROL_ACTION_DELAY_TIME,
+                            .control_type = CONTROL_TYPE_ANALOG,
+                            .spi_device = &analog_controller0};
+  controls[2] = (control_t){.channel = 3,
+                            .value = 0,
+                            .prev_value = 0,
+                            .action = CONTROL_ACTION_DELAY_FEEDBACK,
+                            .control_type = CONTROL_TYPE_ANALOG,
+                            .spi_device = &analog_controller0};
+
+  controls[3] = (control_t){.channel = 7,
+                            .value = 0,
+                            .prev_value = 0,
+                            .action = CONTROL_ACTION_DELAY_ENABLED,
+                            .control_type = CONTROL_TYPE_TOGGLE,
+                            .spi_device = &gpio_controller0};
+  controls[4] = (control_t){.channel = 3,
+                            .value = 0,
+                            .prev_value = 0,
+                            .action = CONTROL_ACTION_DELAY_FEEDBACK_INFINITE,
+                            .control_type = CONTROL_TYPE_MOMENTRY,
+                            .spi_device = &gpio_controller0};
+
+
+
+  controls[5] = (control_t){.channel = 1,
+                            .value = 0,
+                            .prev_value = 0,
+                            .action = CONTROL_ACTION_FILTER_ENABLED,
+                            .control_type = CONTROL_TYPE_TOGGLE,
+                            .spi_device = &gpio_controller0};
+  controls[6] = (control_t){.channel = 6,
+                            .value = 0,
+                            .prev_value = 0,
+                            .action = CONTROL_ACTION_FILTER_CUTOFF,
+                            .control_type = CONTROL_TYPE_ANALOG,
+                            .spi_device = &analog_controller0};
+  controls[7] = (control_t){.channel = 7,
+                            .value = 0,
+                            .prev_value = 0,
+                            .action = CONTROL_ACTION_FILTER_RESONANCE,
+                            .control_type = CONTROL_TYPE_ANALOG,
+                            .spi_device = &analog_controller0};
+
+
+  // controls[0] = (control_t){.channel = 0,
+  //                           .value = 0,
+  //                           .prev_value = 0,
+  //                           .action = CONTROL_ACTION_DETUNE,
+  //                           .control_type = CONTROL_TYPE_ANALOG,
+  //                           .spi_device = &analog_controller0};
 
   // controls[0] = (control_t){.channel = 1,
   //                           .value = 0,
@@ -61,36 +117,8 @@ void synth_controller_config_init() {
   //                           .action = CONTROL_ACTION_DETUNE,
   //                           .control_type = CONTROL_TYPE_ANALOG,
   //                           .spi_device = &analog_controller0};
-  // controls[2] = (control_t){.channel = 2,
-  //                           .value = 0,
-  //                           .prev_value = 0,
-  //                           .action = CONTROL_ACTION_DELAY_DRY_WET_MIX,
-  //                           .control_type = CONTROL_TYPE_ANALOG,
-  //                           .spi_device = &analog_controller0};
-  // controls[3] = (control_t){.channel = 4,
-  //                           .value = 0,
-  //                           .prev_value = 0,
-  //                           .action = CONTROL_ACTION_DELAY_TIME,
-  //                           .control_type = CONTROL_TYPE_ANALOG,
-  //                           .spi_device = &analog_controller0};
-  // controls[4] = (control_t){.channel = 5,
-  //                           .value = 0,
-  //                           .prev_value = 0,
-  //                           .action = CONTROL_ACTION_DELAY_FEEDBACK,
-  //                           .control_type = CONTROL_TYPE_ANALOG,
-  //                           .spi_device = &analog_controller0};
-  // controls[5] = (control_t){.channel = 6,
-  //                           .value = 0,
-  //                           .prev_value = 0,
-  //                           .action = CONTROL_ACTION_FILTER_CUTOFF,
-  //                           .control_type = CONTROL_TYPE_ANALOG,
-  //                           .spi_device = &analog_controller0};
-  // controls[6] = (control_t){.channel = 7,
-  //                           .value = 0,
-  //                           .prev_value = 0,
-  //                           .action = CONTROL_ACTION_FILTER_RESONANCE,
-  //                           .control_type = CONTROL_TYPE_ANALOG,
-  //                           .spi_device = &analog_controller0};
+
+
 
   // controls[7] = (control_t){.channel = 7,
   //                           .value = 0,
@@ -98,31 +126,20 @@ void synth_controller_config_init() {
   //                           .control_type = CONTROL_TYPE_ANALOG,
   //                           .spi_device = &analog_controller0};
 
-  controls[1] = (control_t){.channel = 1,
-                            .value = 0,
-                            .prev_value = 0,
-                            .action = CONTROL_ACTION_FILTER_ENABLED,
-                            .control_type = CONTROL_TYPE_TOGGLE,
-                            .spi_device = &gpio_controller0};
 
-  controls[2] = (control_t){.channel = 3,
-                            .value = 0,
-                            .prev_value = 0,
-                            .action = CONTROL_ACTION_DELAY_ENABLED,
-                            .control_type = CONTROL_TYPE_TOGGLE,
-                            .spi_device = &gpio_controller0};
 
-  controls[3] = (control_t){.channel = 5,
-                            .value = 0,
-                            .prev_value = 0,
-                            .action = CONTROL_ACTION_DELAY_FEEDBACK_INFINITE,
-                            .control_type = CONTROL_TYPE_TOGGLE,
-                            .spi_device = &gpio_controller0};
 
-  controls[4] = (control_t){.channel = 7,
-                            .value = 0,
-                            .prev_value = 0,
-                            .action = CONTROL_ACTION_DELAY_FEEDBACK_INFINITE,
-                            .control_type = CONTROL_TYPE_TOGGLE,
-                            .spi_device = &gpio_controller0};
+//   controls[3] = (control_t){.channel = 5,
+//                             .value = 0,
+//                             .prev_value = 0,
+//                             .action = CONTROL_ACTION_DELAY_FEEDBACK_INFINITE,
+//                             .control_type = CONTROL_TYPE_TOGGLE,
+//                             .spi_device = &gpio_controller0};
+
+//   controls[4] = (control_t){.channel = 7,
+//                             .value = 0,
+//                             .prev_value = 0,
+//                             .action = CONTROL_ACTION_DELAY_FEEDBACK_INFINITE,
+//                             .control_type = CONTROL_TYPE_TOGGLE,
+//                             .spi_device = &gpio_controller0};
 }

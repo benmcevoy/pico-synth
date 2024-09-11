@@ -6,7 +6,7 @@
 #include "pitchtable.h"
 #include "waveform.h"
 
-const uint LED_PIN = 16;
+const uint LED_PIN = 18;
 static uint32_t interval = 0;
 static uint32_t led_on_interval = 0;
 static fix16 velocity = FIX16_POINT_5;

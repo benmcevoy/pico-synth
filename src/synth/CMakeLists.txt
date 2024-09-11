@@ -24,6 +24,11 @@ target_compile_definitions(pico-clock-div4 PRIVATE PICO_FLASH_SPI_CLKDIV=4)
 pico_set_boot_stage2(${projectName} pico-clock-div4)
 
 # configure UART
+target_compile_definitions(${projectName} PRIVATE
+ 	PICO_DEFAULT_UART_TX_PIN=16
+	PICO_DEFAULT_UART_RX_PIN=17
+)
+
 pico_enable_stdio_usb(${projectName} 0)
 pico_enable_stdio_uart(${projectName} 1)
 
