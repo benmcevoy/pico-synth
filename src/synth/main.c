@@ -23,22 +23,12 @@
 #include "tusb.h"
 #include "tusb_config.h"
 #include "usb_midi_host.h"
+#include "pio_usb.h"
 
 #define PWM_PIN 26
 
 // uncomment to use midi or comment out for the test code
 #define USE_MIDI
-
-// define to be a host, comment out to be a device
-// TODO: should work simultaneously
-// might look for a button being held down to switch mode?
-// seems it requires an additional USB port via PIO
-// I can get this to build but need to script this project a bit as I have no
-// idea how... combination of submodules at various commits that do not maktch
-// the pico-sdk any more when it does build the GPIO is using pins 2 & 3 afaik
-// that conflicts with uart and also PANICS over the dma channel but it builds
-// :) https://github.com/hathach/tinyusb/issues/1669
-#define USE_MIDI_HOST
 
 static uint16_t buffer0[BUFFER_LENGTH] = {0};
 static uint16_t buffer1[BUFFER_LENGTH] = {0};
@@ -316,18 +306,18 @@ void init_all() {
   synth_filter_init(context);
   synth_delay_init();
   uint slice = synth_pwm_init();
-  synth_dma_init(slice);
-  synth_controller_init();
+  
 
 #ifdef USE_MIDI
   // midi is intialised when mounted
-
-// TODO: try and get rid of this
-#ifdef USE_MIDI_HOST
+  pio_usb_configuration_t pio_cfg = PIO_USB_DEFAULT_CONFIG;
+  
+  tuh_configure(BOARD_TUH_RHPORT, TUH_CFGID_RPI_PIO_USB_CONFIGURATION, &pio_cfg);
   tuh_init(BOARD_TUH_RHPORT);
-#else
   tud_init(BOARD_TUD_RHPORT);
-#endif
+
+  synth_dma_init(slice);
+  synth_controller_init();
 
   // read to initialise to the state of the physical controls
   synth_controller_task(context);
@@ -341,14 +331,9 @@ void core1_worker() {
     // it's not really a sequencer
     synth_test_play(context);
 #else
-// TODO: try and get rid of this
-#ifdef USE_MIDI_HOST
-    // tinyusb host task
     tuh_task();
-#else
     tud_task();
     synth_midi_device_task(context);
-#endif
 #endif
   }
 }
@@ -359,6 +344,7 @@ int main() {
 
   // can go to 420MHz set vreg to 1.3
   vreg_set_voltage(VREG_VOLTAGE_1_15);
+  // must be multiple of 12MHz for USB PIO
   set_sys_clock_khz(320000, true);
 
   stdio_init_all();
@@ -368,11 +354,10 @@ int main() {
 
   printf("\n----------------------\nSynth starting.\n");
   printf("system clock: %uMHz\n", systemClockHz);
-
   printf("sample rate: %dHz\n", SAMPLE_RATE);
   printf("bit depth: %d\n", 16 - bit_depth);
-
   synth_audiocontext_debug(context);
+  printf("\n----------------------\n");
 
   // run USB tasks
   multicore_launch_core1(core1_worker);
@@ -382,15 +367,15 @@ int main() {
     // SPI clock for the controller is set to 3.6Mhz
     // which runs at about 35 uSecond
     // so in theory this could be run on a timer at half sample rate or 16kHz
-    // TODO: see how stable it at this clock - previously was running at 120Khz 
+    // TODO: see how stable it at this clock - previously was running at 120Khz
     // so 3.6MHz is a bit of a jump
     // also - has to query 64 controls if I expose all features
     // so I need some headroom
 
-    //uint32_t start = time_us_32();
-    synth_controller_task(context);    
-    //uint32_t end = time_us_32();
-    //printf("%uus\n", end-start);
+    // uint32_t start = time_us_32();
+    synth_controller_task(context);
+    // uint32_t end = time_us_32();
+    // printf("%uus\n", end-start);
   }
 }
 
@@ -452,3 +437,7 @@ void tuh_midi_rx_cb(uint8_t dev_addr, uint32_t num_packets) {
 }
 
 void tuh_midi_tx_cb(uint8_t dev_addr) { (void)dev_addr; }
+
+void tuh_hid_report_received_cb(uint8_t dev_addr, uint8_t instance,
+                                uint8_t const *report, uint16_t len) {
+}

@@ -123,6 +123,8 @@ void synth_controller_task(audio_context_t* context) {
         // TODO: ramp(envelope?) from feedback to 1 while button is held down
         // then ramp back to feedback on release
         context->delay.feedback = (control->value == 1) ? FIX16_ONE : feedback;
+        // TODO: this "infinte" flag is dodgy
+        context->delay.infinite = (control->value == 1) ? true : false;
         break;
 
       case CONTROL_ACTION_DELAY_DRY_WET_MIX:

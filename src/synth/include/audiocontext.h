@@ -73,6 +73,7 @@ typedef struct {
 
 typedef struct {
   bool enabled;
+  bool infinite;
   /// @brief number of samples to delay by
   uint16_t delay_in_samples;
   fix16 feedback;

@@ -14,11 +14,15 @@ You can find a `synth.uf2` file in the build folder which can be copied onto the
 
 This is about the third C project I have written in the last thirty years, so you know... all bugs are my own.
 
+## Pico-SDK
+
+For PIO USB needs to be on develop, at milestone 2.1 release should be back on master.
+
 ## TinyUSB
 
 pico-sdk ships an older version of tinyusb, so i have pulled latest of that module in order to get the newer usb host code.
 
-Must be > v0.16
+Must be >= v0.17
 
 ```
 # update sdk
@@ -29,5 +33,13 @@ git submodule update --init --recursive
 cd pico-sdk/lib/tinyusb
 git pull origin master
 ```
+
+Run to get the dependances for pio usb.
+
+```
+python3 tools/get_deps.py rp2040
+```
+
+
 
 midi host code from:  https://github.com/rppicomidi/usb_midi_host
